@@ -1,0 +1,21 @@
+2025-09-13 11:54:48,580 | INFO | ingest_done | profile=1 | inserted=2 | duplicates=1 | errors=0
+2025-09-13 11:54:48,582 | INFO | ingest_done | profile=1 | inserted=0 | duplicates=3 | errors=0
+2025-09-13 11:54:48,593 | WARNING | row_error | empty symbol | row={'Date': None, 'Time': '09:35', 'Symbol': ' ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Missing date & symbol'}
+2025-09-13 11:54:48,594 | WARNING | row_error | bad date: 2024-13-02 | row={'Date': '2024-13-02', 'Time': '09:35', 'Symbol': 'ZZZZ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Bad month'}
+2025-09-13 11:54:48,594 | INFO | dry_run | profile=1 | rows=0 | symbols=0 | errors=2
+2025-09-13 11:55:10,088 | INFO | dry_run | profile=1 | rows=3 | symbols=2 | errors=0
+2025-09-13 11:55:15,261 | INFO | ingest_done | profile=1 | inserted=0 | duplicates=3 | errors=0
+2025-09-13 11:55:21,692 | INFO | ingest_done | profile=1 | inserted=0 | duplicates=3 | errors=0
+2025-09-13 11:55:26,454 | WARNING | row_error | empty symbol | row={'Date': None, 'Time': '09:35', 'Symbol': ' ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Missing date & symbol'}
+2025-09-13 11:55:26,458 | WARNING | row_error | bad date: 2024-13-02 | row={'Date': '2024-13-02', 'Time': '09:35', 'Symbol': 'ZZZZ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Bad month'}
+2025-09-13 11:55:26,458 | INFO | dry_run | profile=1 | rows=0 | symbols=0 | errors=2
+2025-09-13 11:56:39,875 | INFO | ingest_done | profile=1 | inserted=0 | duplicates=3 | errors=0
+2025-09-13 11:56:39,878 | INFO | ingest_done | profile=1 | inserted=0 | duplicates=3 | errors=0
+2025-09-13 11:56:39,995 | WARNING | row_error | empty symbol | row={'Date': None, 'Time': '09:35', 'Symbol': ' ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Missing date & symbol'}
+2025-09-13 11:56:39,996 | WARNING | row_error | bad date: 2024-13-02 | row={'Date': '2024-13-02', 'Time': '09:35', 'Symbol': 'ZZZZ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Bad month'}
+2025-09-13 11:56:39,996 | INFO | dry_run | profile=1 | rows=0 | symbols=0 | errors=2
+2025-09-13 11:56:58,290 | INFO | ingest_done | profile=8276 | inserted=2 | duplicates=1 | errors=0
+2025-09-13 11:56:58,292 | INFO | ingest_done | profile=8276 | inserted=0 | duplicates=3 | errors=0
+2025-09-13 11:56:58,297 | WARNING | row_error | empty symbol | row={'Date': None, 'Time': '09:35', 'Symbol': ' ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Missing date & symbol'}
+2025-09-13 11:56:58,298 | WARNING | row_error | bad date: 2024-13-02 | row={'Date': '2024-13-02', 'Time': '09:35', 'Symbol': 'ZZZZ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Bad month'}
+2025-09-13 11:56:58,298 | INFO | dry_run | profile=8296 | rows=0 | symbols=0 | errors=2

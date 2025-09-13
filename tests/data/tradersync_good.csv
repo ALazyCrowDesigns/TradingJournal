@@ -1,0 +1,4 @@
+Date,Time,Symbol,Side,Quantity,Entry,Exit,PnL,ReturnPct,Notes
+2024-01-02,09:35,ABCD,LONG,100,1.23,1.45,22.0,17.9,First trade
+2024-01-02,10:12,ABCD,LONG,50,1.40,1.42,1.0,1.4,Scalp
+2024-01-03,09:35,EFGH,SHORT,200,5.00,4.80,40.0,4.0,Fade

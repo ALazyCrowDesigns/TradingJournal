@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from datetime import date
 
 from sqlalchemy import Engine, asc, create_engine, desc, select, text
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -55,6 +56,18 @@ def upsert_symbols(rows: Iterable[dict]) -> None:
 def insert_trades(trades: Sequence[dict]) -> None:
     with session_scope() as s:
         s.bulk_insert_mappings(Trade, list(trades))
+
+
+def insert_trades_ignore_duplicates_dicts(rows: list[dict]) -> int:
+    if not rows:
+        return 0
+    stmt = sqlite_insert(Trade).values(rows)
+    # Unique constraint exists on (profile_id, symbol, trade_date)
+    stmt = stmt.on_conflict_do_nothing(index_elements=["profile_id", "symbol", "trade_date"])
+    with engine.begin() as conn:
+        result = conn.execute(stmt)
+        # SQLite returns rowcount for inserted rows only
+        return result.rowcount or 0
 
 
 def upsert_daily_prices(rows: Sequence[dict]) -> None:
