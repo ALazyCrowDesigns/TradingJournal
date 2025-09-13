@@ -4,7 +4,7 @@ from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from datetime import date
 
-from sqlalchemy import Engine, asc, create_engine, desc, select, text
+from sqlalchemy import Engine, asc, create_engine, desc, select, text, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
@@ -140,3 +140,32 @@ def optimize_db() -> None:
     with engine.connect() as con:
         con.execute(text("PRAGMA optimize;"))
         con.execute(text("ANALYZE;"))
+
+
+def get_distinct_symbols() -> list[str]:
+    with session_scope() as s:
+        return [r[0] for r in s.execute(select(Symbol.symbol)).all()]
+
+
+def get_trade_dates_by_symbol(symbol: str) -> list[date]:
+    with session_scope() as s:
+        rows = s.execute(select(Trade.trade_date).where(Trade.symbol == symbol)).all()
+        return [r[0] for r in rows]
+
+
+def set_prev_close(symbol: str, d: date, prev_close: float) -> int:
+    with session_scope() as s:
+        res = s.execute(
+            update(Trade)
+            .where(Trade.symbol == symbol, Trade.trade_date == d)
+            .values(prev_close=prev_close)
+        )
+        return res.rowcount or 0
+
+
+def get_close_from_db(symbol: str, d: date) -> float | None:
+    with session_scope() as s:
+        row = s.execute(
+            select(DailyPrice.c).where(DailyPrice.symbol == symbol, DailyPrice.date == d)
+        ).first()
+        return float(row[0]) if row else None

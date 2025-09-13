@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+import random
+import time
+from datetime import UTC, date, datetime
 
 import httpx
 
@@ -10,22 +12,33 @@ from ..db.dao import upsert_daily_prices
 BASE = "https://api.polygon.io/v2"
 
 
-def _auth_params() -> dict:
+def _auth() -> dict:
     if not settings.polygon_api_key:
-        raise RuntimeError("POLYGON_API_KEY is missing in .env")
+        raise RuntimeError("POLYGON_API_KEY missing")
     return {"apiKey": settings.polygon_api_key}
 
 
-def get_daily_range(symbol: str, start: date, end: date) -> list[dict]:
-    start_s = start.isoformat()
-    end_s = end.isoformat()
-    url = f"{BASE}/aggs/ticker/{symbol}/range/1/day/{start_s}/{end_s}"
-    r = httpx.get(url, params=_auth_params(), timeout=30)
-    r.raise_for_status()
-    data = (r.json() or {}).get("results", []) or []
+def _req_with_retries(url: str, params: dict, max_tries: int = 5) -> httpx.Response:
+    delay = 0.5
+    for attempt in range(1, max_tries + 1):
+        try:
+            r = httpx.get(url, params=params, timeout=30)
+            if r.status_code in (429, 500, 502, 503, 504):
+                raise httpx.HTTPStatusError("retryable", request=r.request, response=r)
+            r.raise_for_status()
+            return r
+        except (httpx.TimeoutException, httpx.HTTPStatusError):
+            if attempt == max_tries:
+                raise
+            time.sleep(delay + random.uniform(0, delay / 2))
+            delay = min(delay * 2, 8.0)
+
+
+def _parse_results(symbol: str, results: list[dict]) -> list[dict]:
     rows = []
-    for it in data:
-        d = datetime.utcfromtimestamp(it["t"] / 1000).date()
+    for it in results or []:
+        # Polygon returns ms epoch in "t"; normalize to UTC date
+        d = datetime.fromtimestamp(it["t"] / 1000, UTC).date()
         rows.append(
             {
                 "symbol": symbol,
@@ -40,13 +53,14 @@ def get_daily_range(symbol: str, start: date, end: date) -> list[dict]:
     return rows
 
 
-def get_prev_close(symbol: str, on_date: date) -> float | None:
-    prev = on_date - timedelta(days=1)
-    rows = get_daily_range(symbol, prev, prev)
-    return rows[0]["c"] if rows else None
+def get_daily_range(symbol: str, start: date, end: date) -> list[dict]:
+    url = f"{BASE}/aggs/ticker/{symbol}/range/1/day/{start.isoformat()}/{end.isoformat()}"
+    r = _req_with_retries(url, _auth())
+    return _parse_results(symbol, (r.json() or {}).get("results", []) or [])
 
 
-def backfill_daily(symbol: str, start: date, end: date) -> None:
+def backfill_daily(symbol: str, start: date, end: date) -> int:
     rows = get_daily_range(symbol, start, end)
     if rows:
         upsert_daily_prices(rows)
+    return len(rows)
