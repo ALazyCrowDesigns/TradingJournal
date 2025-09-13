@@ -32,7 +32,7 @@ def get_daily_range(symbol: str, start: date, end: date) -> list[dict]:
                 "date": d,
                 "o": float(it["o"]),
                 "h": float(it["h"]),
-                "l": float(it["l"]),
+                "low": float(it["l"]),
                 "c": float(it["c"]),
                 "v": int(it["v"]),
             }
