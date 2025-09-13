@@ -24,5 +24,9 @@ class Flip:
 def test_retries(monkeypatch: Any) -> None:
     f = Flip()
     monkeypatch.setattr(httpx, "get", f)
+    # Mock the _auth function to return a fake auth header
+    monkeypatch.setattr(
+        "journal.services.market._auth", lambda: {"Authorization": "Bearer fake_key"}
+    )
     rows = get_daily_range("ABCD", date(2024, 1, 1), date(2024, 1, 1))
     assert len(rows) == 1

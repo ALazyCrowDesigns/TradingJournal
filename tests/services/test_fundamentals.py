@@ -9,8 +9,11 @@ from journal.services.fundamentals import hydrate_missing
 
 def test_hydrate_missing(monkeypatch: Any) -> None:
     # seed a symbol with missing fundamentals
+    import uuid
+
+    test_symbol = f"TEST{uuid.uuid4().hex[:8].upper()}"
     with session_scope() as s:
-        s.add(Symbol(symbol="FAKE"))
+        s.add(Symbol(symbol=test_symbol))
 
     def fake_get(url: str, params: dict[str, Any] | None = None, timeout: int = 30) -> Any:
         class Resp:

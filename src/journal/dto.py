@@ -32,11 +32,6 @@ class TradeIn(BaseModel):
     notes: str | None = None
 
     prev_close: float | None = None
-    o: float | None = None
-    h: float | None = None
-    low: float | None = None
-    c: float | None = None
-    v: int | None = None
 
     @field_validator("symbol")
     @classmethod

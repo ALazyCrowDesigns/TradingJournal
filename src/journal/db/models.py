@@ -53,11 +53,6 @@ class Trade(Base):
     notes: Mapped[str | None] = mapped_column(String(512))
 
     prev_close: Mapped[float | None] = mapped_column(Float)
-    o: Mapped[float | None] = mapped_column(Float)
-    h: Mapped[float | None] = mapped_column(Float)
-    low: Mapped[float | None] = mapped_column(Float)
-    c: Mapped[float | None] = mapped_column(Float)
-    v: Mapped[int | None] = mapped_column(Integer)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now())
 
