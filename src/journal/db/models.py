@@ -34,7 +34,7 @@ class Symbol(Base):
     name: Mapped[str | None] = mapped_column(String(128))
     sector: Mapped[str | None] = mapped_column(String(64))
     industry: Mapped[str | None] = mapped_column(String(64))
-    shares_float: Mapped[float | None] = mapped_column(Float)
+    float: Mapped[float | None] = mapped_column(Float)
     float_asof: Mapped[date | None] = mapped_column(Date)
 
 

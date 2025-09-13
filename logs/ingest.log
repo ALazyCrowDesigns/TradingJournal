@@ -40,3 +40,13 @@
 2025-09-13 12:12:04,735 | WARNING | row_error | empty symbol | row={'Date': None, 'Time': '09:35', 'Symbol': ' ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Missing date & symbol'}
 2025-09-13 12:12:04,736 | WARNING | row_error | bad date: 2024-13-02 | row={'Date': '2024-13-02', 'Time': '09:35', 'Symbol': 'ZZZZ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Bad month'}
 2025-09-13 12:12:04,736 | INFO | dry_run | profile=4734 | rows=0 | symbols=0 | errors=2
+2025-09-13 12:15:33,658 | INFO | ingest_done | profile=3651 | inserted=2 | duplicates=1 | errors=0
+2025-09-13 12:15:33,661 | INFO | ingest_done | profile=3651 | inserted=0 | duplicates=3 | errors=0
+2025-09-13 12:15:33,665 | WARNING | row_error | empty symbol | row={'Date': None, 'Time': '09:35', 'Symbol': ' ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Missing date & symbol'}
+2025-09-13 12:15:33,666 | WARNING | row_error | bad date: 2024-13-02 | row={'Date': '2024-13-02', 'Time': '09:35', 'Symbol': 'ZZZZ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Bad month'}
+2025-09-13 12:15:33,666 | INFO | dry_run | profile=3664 | rows=0 | symbols=0 | errors=2
+2025-09-13 12:22:37,944 | INFO | ingest_done | profile=7930 | inserted=2 | duplicates=1 | errors=0
+2025-09-13 12:22:37,947 | INFO | ingest_done | profile=7930 | inserted=0 | duplicates=3 | errors=0
+2025-09-13 12:22:37,960 | WARNING | row_error | empty symbol | row={'Date': None, 'Time': '09:35', 'Symbol': ' ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Missing date & symbol'}
+2025-09-13 12:22:37,960 | WARNING | row_error | bad date: 2024-13-02 | row={'Date': '2024-13-02', 'Time': '09:35', 'Symbol': 'ZZZZ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Bad month'}
+2025-09-13 12:22:37,960 | INFO | dry_run | profile=7953 | rows=0 | symbols=0 | errors=2

@@ -10,7 +10,7 @@ class SymbolIn(BaseModel):
     name: str | None = None
     sector: str | None = None
     industry: str | None = None
-    shares_float: float | None = None
+    float: float | None = None
     float_asof: date | None = None
 
     @field_validator("symbol")

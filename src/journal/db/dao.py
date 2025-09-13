@@ -169,3 +169,65 @@ def get_close_from_db(symbol: str, d: date) -> float | None:
             select(DailyPrice.c).where(DailyPrice.symbol == symbol, DailyPrice.date == d)
         ).first()
         return float(row[0]) if row else None
+
+
+def upsert_symbols_float_newer(rows: list[dict]) -> int:
+    """
+    rows: [{"symbol": "AAPL", "float": 15_000_000, "float_asof": date(2024,1,15)}, ...]
+    Newer wins: update only if incoming float_asof is newer than existing (or existing is NULL).
+    """
+    if not rows:
+        return 0
+    stmt = sqlite_insert(Symbol).values(rows)
+    # On insert: write all fields. On conflict: update only when newer.
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["symbol"],
+        set_={
+            "float": stmt.excluded.float,
+            "float_asof": stmt.excluded.float_asof,
+        },
+        where=(
+            (stmt.excluded.float_asof.isnot(None))
+            & ((Symbol.float_asof.is_(None)) | (stmt.excluded.float_asof > Symbol.float_asof))
+        ),
+    )
+    with engine.begin() as conn:
+        res = conn.execute(stmt)
+        return res.rowcount or 0
+
+
+def get_symbols_missing_fundamentals(limit: int | None = None) -> list[str]:
+    """
+    Return symbols where any of name/sector/industry is NULL.
+    """
+    q = select(Symbol.symbol).where(
+        (Symbol.name.is_(None)) | (Symbol.sector.is_(None)) | (Symbol.industry.is_(None))
+    )
+    if limit:
+        q = q.limit(limit)
+    with session_scope() as s:
+        return [r[0] for r in s.execute(q).all()]
+
+
+def update_symbols_fundamentals(rows: list[dict]) -> int:
+    """
+    rows: [{"symbol":"AAPL","name":"Apple Inc.","sector":"Tech","industry":"Electronics"}, ...]
+    Overwrites provided fields.
+    """
+    if not rows:
+        return 0
+    count = 0
+    with session_scope() as s:
+        for r in rows:
+            sym = r.get("symbol")
+            if not sym:
+                continue
+            obj = s.get(Symbol, sym)
+            if not obj:
+                obj = Symbol(symbol=sym)
+                s.add(obj)
+            for k in ("name", "sector", "industry"):
+                if k in r:
+                    setattr(obj, k, r[k])
+            count += 1
+    return count
