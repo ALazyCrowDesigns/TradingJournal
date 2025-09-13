@@ -2,11 +2,30 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    MetaData,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+NAMING_CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
 
-class Base(DeclarativeBase): ...
+
+class Base(DeclarativeBase):
+    metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
 class Symbol(Base):
@@ -15,7 +34,7 @@ class Symbol(Base):
     name: Mapped[str | None] = mapped_column(String(128))
     sector: Mapped[str | None] = mapped_column(String(64))
     industry: Mapped[str | None] = mapped_column(String(64))
-    float: Mapped[float | None] = mapped_column(Float)
+    shares_float: Mapped[float | None] = mapped_column(Float)
     float_asof: Mapped[date | None] = mapped_column(Date)
 
 
@@ -40,7 +59,7 @@ class Trade(Base):
     c: Mapped[float | None] = mapped_column(Float)
     v: Mapped[int | None] = mapped_column(Integer)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now())
 
     __table_args__ = (
         UniqueConstraint("profile_id", "symbol", "trade_date", name="uq_trade_identity"),

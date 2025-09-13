@@ -19,6 +19,6 @@ def load_float_csv(path: str, asof: date | None = None) -> None:
                 val = float(rec[1])
             except Exception:
                 continue
-            rows.append({"symbol": sym, "float": val, "float_asof": asof})
+            rows.append({"symbol": sym, "shares_float": val, "float_asof": asof})
     if rows:
         upsert_symbols(rows)
