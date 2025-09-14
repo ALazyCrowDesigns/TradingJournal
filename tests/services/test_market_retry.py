@@ -3,7 +3,9 @@ from typing import Any
 
 import httpx
 
-from journal.services.market import get_daily_range
+from journal.services.market import MarketService
+from journal.repositories.price import PriceRepository
+from journal.db.dao import _mk_engine
 
 
 class Flip:
@@ -24,9 +26,11 @@ class Flip:
 def test_retries(monkeypatch: Any) -> None:
     f = Flip()
     monkeypatch.setattr(httpx, "get", f)
-    # Mock the _auth function to return a fake auth header
-    monkeypatch.setattr(
-        "journal.services.market._auth", lambda: {"Authorization": "Bearer fake_key"}
-    )
-    rows = get_daily_range("ABCD", date(2024, 1, 1), date(2024, 1, 1))
+    
+    # Create service instance with fake API key and price repository
+    engine = _mk_engine()
+    price_repo = PriceRepository(engine)
+    service = MarketService(api_key="fake_key", price_repository=price_repo)
+    
+    rows = service.get_daily_range("ABCD", date(2024, 1, 1), date(2024, 1, 1))
     assert len(rows) == 1

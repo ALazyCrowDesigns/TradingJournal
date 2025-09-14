@@ -23,15 +23,16 @@ def _mk_engine() -> Engine:
     engine = create_engine(
         url,
         future=True,
-        pool_pre_ping=True,
+        # Disable pre-ping for SQLite (not needed for file-based DB)
+        pool_pre_ping=False,
         # SQLite optimization: use StaticPool for better performance
         poolclass=sqlalchemy.pool.StaticPool,
         connect_args={
             "check_same_thread": False,
-            "timeout": 30,
+            "timeout": 10,     # Reduced timeout for faster failures
         },
-        # Enable query statistics in dev mode
-        echo=settings.app_env == "dev",
+        # Disable SQL logging for better startup performance
+        echo=False,
     )
 
     # Apply performance pragmas
@@ -194,12 +195,84 @@ def set_prev_close(symbol: str, d: date, prev_close: float) -> int:
         return res.rowcount or 0
 
 
+def set_prev_close_bulk(updates: list[tuple[str, date, float]]) -> int:
+    """Bulk update previous close values for multiple symbol-date pairs"""
+    if not updates:
+        return 0
+    
+    total_updated = 0
+    with session_scope() as s:
+        # Group updates by symbol for better performance
+        symbol_updates = {}
+        for symbol, trade_date, prev_close in updates:
+            if symbol not in symbol_updates:
+                symbol_updates[symbol] = []
+            symbol_updates[symbol].append((trade_date, prev_close))
+        
+        # Update each symbol's trades in batch
+        for symbol, date_price_pairs in symbol_updates.items():
+            # Build CASE statement for bulk update
+            case_conditions = []
+            for trade_date, prev_close in date_price_pairs:
+                case_conditions.append((Trade.trade_date == trade_date, prev_close))
+            
+            if case_conditions:
+                res = s.execute(
+                    update(Trade)
+                    .where(
+                        and_(
+                            Trade.symbol == symbol,
+                            Trade.trade_date.in_([dp[0] for dp in date_price_pairs])
+                        )
+                    )
+                    .values(prev_close=case(
+                        *case_conditions,
+                        else_=Trade.prev_close  # Keep existing value if no match
+                    ))
+                )
+                total_updated += res.rowcount or 0
+    
+    return total_updated
+
+
 def get_close_from_db(symbol: str, d: date) -> float | None:
     with session_scope() as s:
         row = s.execute(
             select(DailyPrice.c).where(DailyPrice.symbol == symbol, DailyPrice.date == d)
         ).first()
         return float(row[0]) if row else None
+
+
+def get_closes_from_db_bulk(symbol_dates: list[tuple[str, date]]) -> dict[tuple[str, date], float]:
+    """Get closing prices for multiple symbol-date pairs in a single query"""
+    if not symbol_dates:
+        return {}
+    
+    result = {}
+    with session_scope() as s:
+        # Group by symbol for more efficient queries
+        symbol_to_dates = {}
+        for symbol, date in symbol_dates:
+            if symbol not in symbol_to_dates:
+                symbol_to_dates[symbol] = []
+            symbol_to_dates[symbol].append(date)
+        
+        # Query each symbol's dates efficiently
+        for symbol, dates in symbol_to_dates.items():
+            rows = s.execute(
+                select(DailyPrice.date, DailyPrice.c)
+                .where(
+                    and_(
+                        DailyPrice.symbol == symbol,
+                        DailyPrice.date.in_(dates)
+                    )
+                )
+            ).all()
+            
+            for date_val, close_price in rows:
+                result[(symbol, date_val)] = float(close_price)
+    
+    return result
 
 
 def upsert_symbols_float_newer(rows: list[dict]) -> int:
@@ -247,21 +320,38 @@ def update_symbols_fundamentals(rows: list[dict]) -> int:
     """
     if not rows:
         return 0
-    count = 0
-    with session_scope() as s:
-        for r in rows:
-            sym = r.get("symbol")
-            if not sym:
-                continue
-            obj = s.get(Symbol, sym)
-            if not obj:
-                obj = Symbol(symbol=sym)
-                s.add(obj)
-            for k in ("name", "sector", "industry"):
-                if k in r:
-                    setattr(obj, k, r[k])
-            count += 1
-    return count
+    
+    # Use upsert for better performance
+    upsert_rows = []
+    for r in rows:
+        sym = r.get("symbol")
+        if not sym:
+            continue
+        
+        # Prepare row for upsert
+        upsert_row = {"symbol": sym}
+        for k in ("name", "sector", "industry"):
+            if k in r:
+                upsert_row[k] = r[k]
+        upsert_rows.append(upsert_row)
+    
+    if not upsert_rows:
+        return 0
+    
+    # Bulk upsert using SQLite's ON CONFLICT
+    stmt = sqlite_insert(Symbol).values(upsert_rows)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["symbol"],
+        set_={
+            "name": stmt.excluded.name,
+            "sector": stmt.excluded.sector,
+            "industry": stmt.excluded.industry,
+        }
+    )
+    
+    with engine.begin() as conn:
+        result = conn.execute(stmt)
+        return result.rowcount or 0
 
 
 SortDir = Literal["asc", "desc"]

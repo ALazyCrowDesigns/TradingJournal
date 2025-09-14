@@ -1,0 +1,434 @@
+{
+  "current_profile_id": 13,
+  "profiles": {
+    "1": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 1,
+        "has_ohlcv": false
+      },
+      "page_size": 500,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "2": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 2,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "15": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 15,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "4": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 4,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "7": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 7,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "10": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 10,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "16": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 16,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "12": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 12,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "14": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 14,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "17": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 17,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "19": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 19,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "18": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 18,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "11": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 11,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    },
+    "13": {
+      "columns_visible": [
+        "trade_date",
+        "symbol",
+        "side",
+        "size",
+        "entry",
+        "exit",
+        "pnl",
+        "return_pct",
+        "prev_close",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "gap_pct",
+        "range_pct",
+        "closechg_pct"
+      ],
+      "filters": {
+        "profile_id": 13,
+        "has_ohlcv": false
+      },
+      "page_size": 100,
+      "order_by": "trade_date",
+      "order_dir": "desc"
+    }
+  },
+  "global": {
+    "window_geometry": null,
+    "last_import_directory": null
+  },
+  "default_profile_prefs": {
+    "columns_visible": [
+      "trade_date",
+      "symbol",
+      "side",
+      "size",
+      "entry",
+      "exit",
+      "pnl",
+      "return_pct",
+      "prev_close",
+      "o",
+      "h",
+      "l",
+      "c",
+      "v",
+      "gap_pct",
+      "range_pct",
+      "closechg_pct"
+    ],
+    "filters": {
+      "symbol": "",
+      "side": "",
+      "date_from": null,
+      "date_to": null,
+      "pnl_min": null,
+      "pnl_max": null,
+      "has_ohlcv": false
+    },
+    "page_size": 100,
+    "order_by": "trade_date",
+    "order_dir": "desc"
+  }
+}

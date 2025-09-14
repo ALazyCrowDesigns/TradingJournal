@@ -24,7 +24,7 @@ class TradesTableModel(QAbstractTableModel):
         self.offset = 0
 
         # Performance optimizations
-        self._fetch_timer = QTimer()
+        self._fetch_timer = QTimer(self)  # Set parent to avoid threading issues
         self._fetch_timer.setSingleShot(True)
         self._fetch_timer.timeout.connect(self._do_fetch_more)
         self._pending_fetch = False
@@ -91,15 +91,15 @@ class TradesTableModel(QAbstractTableModel):
         # Debounce fetching to avoid rapid successive calls
         self._pending_fetch = True
         self._fetch_timer.stop()
-        self._fetch_timer.start(50)  # 50ms debounce
+        self._fetch_timer.start(200)  # 200ms debounce to reduce startup queries
 
     def _do_fetch_more(self) -> None:
         """Actually perform the fetch operation"""
         self._pending_fetch = False
         self.offset += self.page_size
 
-        # Fetch data from repository
-        trades, total = self._trade_repo.get_paginated(
+        # Fetch data from repository with prices
+        trades_with_prices, total = self._trade_repo.get_paginated_with_prices(
             limit=self.page_size,
             offset=self.offset,
             order_by=self.order_by,
@@ -108,7 +108,7 @@ class TradesTableModel(QAbstractTableModel):
         )
 
         # Convert trades to row data
-        data = self._trades_to_rows(trades)
+        data = self._trades_with_prices_to_rows(trades_with_prices)
 
         if data:
             start_idx = len(self.rows)
@@ -123,54 +123,119 @@ class TradesTableModel(QAbstractTableModel):
             self.endInsertRows()
         self.total = total
 
-    def _trades_to_rows(self, trades: list) -> list[list[Any]]:
-        """Convert Trade objects to row data"""
-        from ..db.models import DailyPrice
-
+    def _trades_with_prices_to_rows(self, trades_with_prices: list[tuple]) -> list[list[Any]]:
+        """Convert Trade and DailyPrice data tuples to row data without additional queries"""
         rows = []
 
-        for trade in trades:
-            # Get associated daily price if available
-            with self._trade_repo._session_scope() as session:
-                from sqlalchemy import and_, select
-
-                price = session.scalar(
-                    select(DailyPrice).where(
-                        and_(DailyPrice.symbol == trade.symbol, DailyPrice.date == trade.trade_date)
-                    )
-                )
+        for trade_data, price_data in trades_with_prices:
+            # Access trade attributes from dictionary
+            trade_date = trade_data['trade_date']
+            symbol = trade_data['symbol']
+            side = trade_data['side']
+            size = trade_data['size']
+            entry = trade_data['entry']
+            exit = trade_data['exit']
+            pnl = trade_data['pnl']
+            return_pct = trade_data['return_pct']
+            prev_close = trade_data['prev_close']
 
             # Calculate derived fields
             gap_pct = None
             range_pct = None
             closechg_pct = None
 
-            if price and trade.prev_close:
-                gap_pct = (price.o - trade.prev_close) / trade.prev_close * 100
-                if price.low > 0:
-                    range_pct = (price.h - price.low) / price.low * 100
-                closechg_pct = (price.c - trade.prev_close) / trade.prev_close * 100
+            if price_data and prev_close:
+                gap_pct = (price_data['o'] - prev_close) / prev_close * 100
+                if price_data['low'] > 0:
+                    range_pct = (price_data['h'] - price_data['low']) / price_data['low'] * 100
+                closechg_pct = (price_data['c'] - prev_close) / prev_close * 100
 
             row = [
-                trade.trade_date,
-                trade.symbol,
-                trade.side,
-                trade.size,
-                trade.entry,
-                trade.exit,
-                trade.pnl,
-                trade.return_pct,
-                trade.prev_close,
-                price.o if price else None,
-                price.h if price else None,
-                price.low if price else None,
-                price.c if price else None,
-                price.v if price else None,
+                trade_date.strftime('%Y-%m-%d') if trade_date else '',
+                symbol,
+                side,
+                size,
+                entry,
+                exit,
+                pnl,
+                return_pct,
+                prev_close,
+                price_data['o'] if price_data else None,
+                price_data['h'] if price_data else None,
+                price_data['low'] if price_data else None,
+                price_data['c'] if price_data else None,
+                price_data['v'] if price_data else None,
                 gap_pct,
                 range_pct,
                 closechg_pct,
             ]
             rows.append(row)
+
+        return rows
+
+    def _trades_to_rows(self, trades: list) -> list[list[Any]]:
+        """Convert Trade objects to row data (deprecated - use _trades_with_prices_to_rows)"""
+        from ..db.models import DailyPrice
+
+        rows = []
+
+        # Process trades within a single session to avoid detached instance errors
+        with self._trade_repo._session_scope() as session:
+            from sqlalchemy import and_, select
+
+            for trade in trades:
+                # Merge the trade into the current session to access its attributes
+                merged_trade = session.merge(trade)
+                
+                # Access trade attributes from the merged object
+                trade_date = merged_trade.trade_date
+                symbol = merged_trade.symbol
+                side = merged_trade.side
+                size = merged_trade.size
+                entry = merged_trade.entry
+                exit = merged_trade.exit
+                pnl = merged_trade.pnl
+                return_pct = merged_trade.return_pct
+                prev_close = merged_trade.prev_close
+
+                # Get associated daily price if available
+                price = session.scalar(
+                    select(DailyPrice).where(
+                        and_(DailyPrice.symbol == symbol, DailyPrice.date == trade_date)
+                    )
+                )
+
+                # Calculate derived fields
+                gap_pct = None
+                range_pct = None
+                closechg_pct = None
+
+                if price and prev_close:
+                    gap_pct = (price.o - prev_close) / prev_close * 100
+                    if price.low > 0:
+                        range_pct = (price.h - price.low) / price.low * 100
+                    closechg_pct = (price.c - prev_close) / prev_close * 100
+
+                row = [
+                    trade_date.strftime('%Y-%m-%d') if trade_date else '',
+                    symbol,
+                    side,
+                    size,
+                    entry,
+                    exit,
+                    pnl,
+                    return_pct,
+                    prev_close,
+                    price.o if price else None,
+                    price.h if price else None,
+                    price.low if price else None,
+                    price.c if price else None,
+                    price.v if price else None,
+                    gap_pct,
+                    range_pct,
+                    closechg_pct,
+                ]
+                rows.append(row)
 
         return rows
 
@@ -201,8 +266,8 @@ class TradesTableModel(QAbstractTableModel):
             self._cache_queue.clear()
             self.endResetModel()
 
-        # Fetch fresh data
-        trades, total = self._trade_repo.get_paginated(
+        # Fetch fresh data with prices
+        trades_with_prices, total = self._trade_repo.get_paginated_with_prices(
             limit=self.page_size,
             offset=self.offset,
             order_by=self.order_by,
@@ -210,7 +275,7 @@ class TradesTableModel(QAbstractTableModel):
             filters=self.filters,
         )
 
-        data = self._trades_to_rows(trades)
+        data = self._trades_with_prices_to_rows(trades_with_prices)
 
         self.beginResetModel()
         self.rows = data or []

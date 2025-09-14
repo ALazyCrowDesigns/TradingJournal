@@ -64,42 +64,64 @@ class FundamentalsService:
 
         updated = 0
         errors = 0
+        profiles_to_update = []
 
+        # Fetch all profiles first
         for symbol in symbols:
             try:
                 profile = self._fetch_profile(symbol)
                 if profile:
-                    self._symbol_repo.update_fundamentals([profile])
-                    updated += 1
-
-                    self._logger.debug("symbol_updated", symbol=symbol, name=profile.get("name"))
+                    profiles_to_update.append(profile)
+                    self._logger.debug("symbol_fetched", symbol=symbol, name=profile.get("name"))
             except Exception as e:
                 errors += 1
                 self._logger.warning("fetch_failed", symbol=symbol, error=str(e))
                 # Continue processing other symbols
 
+        # Batch update all profiles at once
+        if profiles_to_update:
+            try:
+                self._symbol_repo.update_fundamentals(profiles_to_update)
+                updated = len(profiles_to_update)
+                self._logger.info("batch_updated", count=updated)
+            except Exception as e:
+                errors += len(profiles_to_update)
+                self._logger.error("batch_update_failed", error=str(e))
+
         self._logger.info("hydration_complete", updated=updated, errors=errors, total=len(symbols))
 
         return {"skipped": False, "updated": updated, "errors": errors, "total": len(symbols)}
 
+    @cached(ttl=300, key_prefix="fundamentals")
     def get_sector_overview(self) -> dict[str, int]:
-        """Get count of symbols by sector"""
-        symbols = self._symbol_repo.get_many()
-        sector_counts = {}
+        """Get count of symbols by sector using SQL aggregation"""
+        with self._symbol_repo._session_scope() as session:
+            from sqlalchemy import func, select
+            from ..db.models import Symbol
+            
+            query = (
+                select(Symbol.sector, func.count(Symbol.symbol).label("count"))
+                .where(Symbol.sector.isnot(None))
+                .group_by(Symbol.sector)
+                .order_by(func.count(Symbol.symbol).desc())
+            )
+            
+            results = session.execute(query).all()
+            return {row.sector: row.count for row in results}
 
-        for symbol in symbols:
-            if symbol.sector:
-                sector_counts[symbol.sector] = sector_counts.get(symbol.sector, 0) + 1
-
-        return sector_counts
-
+    @cached(ttl=300, key_prefix="fundamentals")
     def get_industry_overview(self) -> dict[str, int]:
-        """Get count of symbols by industry"""
-        symbols = self._symbol_repo.get_many()
-        industry_counts = {}
-
-        for symbol in symbols:
-            if symbol.industry:
-                industry_counts[symbol.industry] = industry_counts.get(symbol.industry, 0) + 1
-
-        return industry_counts
+        """Get count of symbols by industry using SQL aggregation"""
+        with self._symbol_repo._session_scope() as session:
+            from sqlalchemy import func, select
+            from ..db.models import Symbol
+            
+            query = (
+                select(Symbol.industry, func.count(Symbol.symbol).label("count"))
+                .where(Symbol.industry.isnot(None))
+                .group_by(Symbol.industry)
+                .order_by(func.count(Symbol.symbol).desc())
+            )
+            
+            results = session.execute(query).all()
+            return {row.industry: row.count for row in results}

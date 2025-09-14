@@ -8,12 +8,14 @@ from datetime import date, timedelta
 
 from ..db.dao import (
     get_close_from_db,
+    get_closes_from_db_bulk,
     get_distinct_symbols,
     get_missing_price_dates,
     get_trade_dates_by_symbol,
     set_prev_close,
+    set_prev_close_bulk,
 )
-from .market import backfill_daily
+from .market import MarketService
 
 logger = logging.getLogger("backfill")
 logger.setLevel(logging.INFO)
@@ -52,15 +54,32 @@ def _make_symbol_plan(symbol: str) -> SymbolPlan:
 
 
 def _fill_prev_close_from_db(symbol: str, dates: Iterable[date]) -> int:
-    updated = 0
-    for d in dates:
-        pc = get_close_from_db(symbol, _prev_day(d))
-        if pc is not None:
-            updated += set_prev_close(symbol, d, pc)
-    return updated
+    """Fill previous close values from database using bulk operations"""
+    date_list = list(dates)
+    if not date_list:
+        return 0
+    
+    # Prepare symbol-date pairs for previous day lookups
+    prev_day_lookups = [(symbol, _prev_day(d)) for d in date_list]
+    
+    # Bulk fetch all previous close prices
+    prev_closes = get_closes_from_db_bulk(prev_day_lookups)
+    
+    # Prepare bulk updates
+    updates = []
+    for d in date_list:
+        prev_day_key = (symbol, _prev_day(d))
+        if prev_day_key in prev_closes:
+            updates.append((symbol, d, prev_closes[prev_day_key]))
+    
+    # Bulk update
+    if updates:
+        return set_prev_close_bulk(updates)
+    
+    return 0
 
 
-def backfill_symbol(symbol: str, max_failures: int = 3) -> dict[str, int]:
+def backfill_symbol(symbol: str, market_service: MarketService, max_failures: int = 3) -> dict[str, int]:
     plan = _make_symbol_plan(symbol)
     if not plan.missing_dates:
         # Still try to set prev_close from DB for any trades lacking it
@@ -72,7 +91,7 @@ def backfill_symbol(symbol: str, max_failures: int = 3) -> dict[str, int]:
     failures = 0
     for start, end in spans:
         try:
-            fetched += backfill_daily(symbol, start, end)
+            fetched += market_service.backfill_daily(symbol, start, end)
         except Exception as e:
             failures += 1
             logger.warning(f"backfill_failed | {symbol} {start}..{end} | {e}")
@@ -85,11 +104,11 @@ def backfill_symbol(symbol: str, max_failures: int = 3) -> dict[str, int]:
     return {"symbol": 1, "rows_fetched": fetched, "prev_close_set": updated, "spans": len(spans)}
 
 
-def backfill_all_missing(max_workers: int = 4) -> dict[str, int]:
+def backfill_all_missing(market_service: MarketService, max_workers: int = 4) -> dict[str, int]:
     syms = get_distinct_symbols()
     totals = {"symbols": 0, "rows_fetched": 0, "prev_close_set": 0, "spans": 0}
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futs = {ex.submit(backfill_symbol, s): s for s in syms}
+        futs = {ex.submit(backfill_symbol, s, market_service): s for s in syms}
         for fut in as_completed(futs):
             res = fut.result()
             totals["symbols"] += res["symbol"]
@@ -102,6 +121,8 @@ def backfill_all_missing(max_workers: int = 4) -> dict[str, int]:
 # CLI
 def main() -> None:
     import argparse
+    import os
+    from ..repositories.price import PriceRepository
 
     p = argparse.ArgumentParser(description="Backfill OHLCV + prev_close")
     g = p.add_mutually_exclusive_group(required=True)
@@ -112,11 +133,16 @@ def main() -> None:
     p.add_argument("--max-workers", type=int, default=4)
     args = p.parse_args()
 
+    # Create MarketService instance
+    api_key = os.getenv("POLYGON_API_KEY")
+    price_repo = PriceRepository()
+    market_service = MarketService(api_key=api_key, price_repository=price_repo)
+
     if args.symbol:
-        out = backfill_symbol(args.symbol)
+        out = backfill_symbol(args.symbol, market_service)
         print(out)
         return
-    out = backfill_all_missing(max_workers=args.max_workers)
+    out = backfill_all_missing(market_service, max_workers=args.max_workers)
     print(out)
 
 

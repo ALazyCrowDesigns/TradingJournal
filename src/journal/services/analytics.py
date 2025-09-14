@@ -38,6 +38,10 @@ class AnalyticsService:
             # Apply filters
             conditions = []
             if filters:
+                # CRITICAL: Always filter by profile_id to ensure profile isolation
+                if profile_id := filters.get("profile_id"):
+                    conditions.append(Trade.profile_id == profile_id)
+                    
                 if symbol := filters.get("symbol"):
                     conditions.append(Trade.symbol.ilike(f"%{symbol}%"))
                 if side := filters.get("side"):
@@ -167,70 +171,94 @@ class AnalyticsService:
                 for row in results
             ]
 
+    @cached(ttl=60, key_prefix="analytics")
     def get_trade_statistics(self, symbol: str | None = None) -> dict:
-        """Get detailed trade statistics"""
-        filters = {"symbol": symbol} if symbol else None
-        trades = self._trade_repo.get_many(filters)
+        """Get detailed trade statistics using optimized SQL queries"""
+        with self._trade_repo._session_scope() as session:
+            # Base query with optional symbol filter
+            base_query = select(Trade)
+            if symbol:
+                base_query = base_query.where(Trade.symbol == symbol)
+            
+            # Get basic stats with SQL aggregation
+            stats_query = select(
+                func.count(Trade.id).label("count"),
+                func.max(Trade.pnl).label("max_pnl"),
+                func.min(Trade.pnl).label("min_pnl"),
+            ).select_from(Trade)
+            
+            if symbol:
+                stats_query = stats_query.where(Trade.symbol == symbol)
+            
+            stats = session.execute(stats_query).one()
+            
+            if stats.count == 0:
+                return {
+                    "count": 0,
+                    "avg_hold_time": 0,
+                    "best_trade": None,
+                    "worst_trade": None,
+                    "consecutive_wins": 0,
+                    "consecutive_losses": 0,
+                }
+            
+            # Get best and worst trades with single queries
+            best_trade_query = base_query.where(Trade.pnl == stats.max_pnl).limit(1)
+            worst_trade_query = base_query.where(Trade.pnl == stats.min_pnl).limit(1)
+            
+            best_trade = session.scalar(best_trade_query)
+            worst_trade = session.scalar(worst_trade_query)
+            
+            # For consecutive wins/losses, we still need to fetch trades ordered by date
+            # But only fetch the minimal data needed
+            consecutive_query = select(Trade.pnl).select_from(Trade)
+            if symbol:
+                consecutive_query = consecutive_query.where(Trade.symbol == symbol)
+            consecutive_query = consecutive_query.order_by(Trade.trade_date)
+            
+            pnl_sequence = [row[0] for row in session.execute(consecutive_query).all()]
+            
+            # Calculate consecutive wins/losses efficiently
+            max_consecutive_wins = 0
+            max_consecutive_losses = 0
+            current_wins = 0
+            current_losses = 0
 
-        if not trades:
+            for pnl in pnl_sequence:
+                if pnl and pnl > 0:
+                    current_wins += 1
+                    current_losses = 0
+                    max_consecutive_wins = max(max_consecutive_wins, current_wins)
+                elif pnl and pnl < 0:
+                    current_losses += 1
+                    current_wins = 0
+                    max_consecutive_losses = max(max_consecutive_losses, current_losses)
+                else:
+                    current_wins = 0
+                    current_losses = 0
+
             return {
-                "count": 0,
-                "avg_hold_time": 0,
-                "best_trade": None,
-                "worst_trade": None,
-                "consecutive_wins": 0,
-                "consecutive_losses": 0,
+                "count": stats.count,
+                "best_trade": (
+                    {
+                        "date": best_trade.trade_date,
+                        "symbol": best_trade.symbol,
+                        "pnl": float(best_trade.pnl),
+                        "return_pct": float(best_trade.return_pct or 0),
+                    }
+                    if best_trade
+                    else None
+                ),
+                "worst_trade": (
+                    {
+                        "date": worst_trade.trade_date,
+                        "symbol": worst_trade.symbol,
+                        "pnl": float(worst_trade.pnl),
+                        "return_pct": float(worst_trade.return_pct or 0),
+                    }
+                    if worst_trade
+                    else None
+                ),
+                "consecutive_wins": max_consecutive_wins,
+                "consecutive_losses": max_consecutive_losses,
             }
-
-        # Sort by date for consecutive calculation
-        trades.sort(key=lambda t: t.trade_date)
-
-        # Calculate consecutive wins/losses
-        max_consecutive_wins = 0
-        max_consecutive_losses = 0
-        current_wins = 0
-        current_losses = 0
-
-        for trade in trades:
-            if trade.pnl and trade.pnl > 0:
-                current_wins += 1
-                current_losses = 0
-                max_consecutive_wins = max(max_consecutive_wins, current_wins)
-            elif trade.pnl and trade.pnl < 0:
-                current_losses += 1
-                current_wins = 0
-                max_consecutive_losses = max(max_consecutive_losses, current_losses)
-            else:
-                current_wins = 0
-                current_losses = 0
-
-        # Find best and worst trades
-        trades_with_pnl = [t for t in trades if t.pnl is not None]
-        best_trade = max(trades_with_pnl, key=lambda t: t.pnl) if trades_with_pnl else None
-        worst_trade = min(trades_with_pnl, key=lambda t: t.pnl) if trades_with_pnl else None
-
-        return {
-            "count": len(trades),
-            "best_trade": (
-                {
-                    "date": best_trade.trade_date,
-                    "symbol": best_trade.symbol,
-                    "pnl": float(best_trade.pnl),
-                    "return_pct": float(best_trade.return_pct or 0),
-                }
-                if best_trade
-                else None
-            ),
-            "worst_trade": (
-                {
-                    "date": worst_trade.trade_date,
-                    "symbol": worst_trade.symbol,
-                    "pnl": float(worst_trade.pnl),
-                    "return_pct": float(worst_trade.return_pct or 0),
-                }
-                if worst_trade
-                else None
-            ),
-            "consecutive_wins": max_consecutive_wins,
-            "consecutive_losses": max_consecutive_losses,
-        }

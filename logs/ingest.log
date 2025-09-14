@@ -93,3 +93,27 @@
 2025-09-13 13:03:37,359 | WARNING | row_error | empty symbol | row={'Date': None, 'Time': '09:35', 'Symbol': ' ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Missing date & symbol'}
 2025-09-13 13:03:37,360 | WARNING | row_error | bad date: 2024-13-02 | row={'Date': '2024-13-02', 'Time': '09:35', 'Symbol': 'ZZZZ', 'Side': 'LONG', 'Quantity': 100, 'Entry': 1.23, 'Exit': 1.45, 'PnL': 22.0, 'ReturnPct': 17.9, 'Notes': 'Bad month'}
 2025-09-13 13:03:37,360 | INFO | dry_run | profile=7357 | rows=0 | symbols=0 | errors=2
+2025-09-13 18:50:09,634 | INFO | Processing 1 chunks of ~5000 rows each
+2025-09-13 18:50:09,635 | ERROR | Failed to process chunk 0: process_csv_chunk() got multiple values for argument 'mapping'
+2025-09-13 18:50:09,635 | INFO | Upserting 0 symbols
+2025-09-13 18:50:09,635 | INFO | ingest_done | profile=9621 | inserted=0 | duplicates=0 | errors=0
+2025-09-13 18:50:09,636 | INFO | Processing 1 chunks of ~5000 rows each
+2025-09-13 18:50:09,636 | ERROR | Failed to process chunk 0: process_csv_chunk() got multiple values for argument 'mapping'
+2025-09-13 18:50:09,636 | INFO | Upserting 0 symbols
+2025-09-13 18:50:09,636 | INFO | ingest_done | profile=9621 | inserted=0 | duplicates=0 | errors=0
+2025-09-13 18:50:09,651 | INFO | Processing 1 chunks of ~5000 rows each
+2025-09-13 18:50:09,652 | ERROR | Failed to process chunk 0: process_csv_chunk() got multiple values for argument 'mapping'
+2025-09-13 18:50:09,652 | INFO | dry_run | profile=9644 | rows=0 | symbols=0 | errors=0
+2025-09-13 19:24:30,087 | INFO | Processing 1 chunks of ~5000 rows each
+2025-09-13 19:24:30,105 | INFO | dry_run | profile=1 | rows=425 | symbols=187 | errors=0
+2025-09-13 19:25:29,270 | INFO | Processing 9 chunks of ~50 rows each
+2025-09-13 19:25:29,290 | INFO | dry_run | profile=1 | rows=425 | symbols=187 | errors=0
+2025-09-13 19:25:46,960 | INFO | Processing 5 chunks of ~100 rows each
+2025-09-13 19:25:46,974 | INFO | Upserting 187 symbols
+2025-09-13 19:25:47,149 | INFO | ingest_done | profile=9999 | inserted=246 | duplicates=179 | errors=0
+2025-09-13 19:30:55,313 | ERROR | Missing required columns in CSV per mapping: ['date', 'quantity']
+2025-09-13 19:31:06,920 | INFO | Processing 1 chunks of ~5000 rows each
+2025-09-13 19:31:06,935 | INFO | dry_run | profile=1 | rows=425 | symbols=187 | errors=0
+2025-09-13 19:31:13,382 | INFO | Processing 1 chunks of ~5000 rows each
+2025-09-13 19:31:13,399 | INFO | Upserting 187 symbols
+2025-09-13 19:31:13,607 | INFO | ingest_done | profile=1 | inserted=246 | duplicates=179 | errors=0

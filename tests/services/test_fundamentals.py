@@ -4,7 +4,9 @@ import httpx
 
 from journal.db.dao import session_scope
 from journal.db.models import Symbol
-from journal.services.fundamentals import hydrate_missing
+from journal.services.fundamentals import FundamentalsService
+from journal.repositories.symbol import SymbolRepository
+from journal.db.dao import _mk_engine
 
 
 def test_hydrate_missing(monkeypatch: Any) -> None:
@@ -15,24 +17,34 @@ def test_hydrate_missing(monkeypatch: Any) -> None:
     with session_scope() as s:
         s.add(Symbol(symbol=test_symbol))
 
-    def fake_get(url: str, params: dict[str, Any] | None = None, timeout: int = 30) -> Any:
-        class Resp:
-            status_code = 200
+    class MockClient:
+        def __init__(self, *args, **kwargs):
+            pass
+        
+        def __enter__(self):
+            return self
+        
+        def __exit__(self, *args):
+            pass
+        
+        def get(self, url: str, params: dict[str, Any] | None = None) -> Any:
+            class Resp:
+                status_code = 200
 
-            def raise_for_status(self) -> None:
-                pass
+                def raise_for_status(self) -> None:
+                    pass
 
-            def json(self) -> list[dict[str, Any]]:
-                return [{"companyName": "Fake Co", "sector": "Industrials", "industry": "Tools"}]
+                def json(self) -> list[dict[str, Any]]:
+                    return [{"companyName": "Fake Co", "sector": "Industrials", "industry": "Tools"}]
 
-        return Resp()
+            return Resp()
 
-    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(httpx, "Client", MockClient)
 
-    # Bypass API key check by monkeypatching _enabled
-    from journal.services import fundamentals as f
+    # Create service instance with fake API key and symbol repository
+    engine = _mk_engine()
+    symbol_repo = SymbolRepository(engine)
+    service = FundamentalsService(api_key="fake_key", symbol_repository=symbol_repo)
 
-    monkeypatch.setattr(f, "_enabled", lambda: True)
-
-    out = hydrate_missing(limit=10)
+    out = service.hydrate_missing(limit=10)
     assert out["updated"] >= 1

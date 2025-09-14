@@ -12,6 +12,7 @@ from sqlalchemy import (
     MetaData,
     String,
     UniqueConstraint,
+    Boolean,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -28,6 +29,24 @@ class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
+class Profile(Base):
+    __tablename__ = "profiles"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+    description: Mapped[str | None] = mapped_column(String(512))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now())
+    
+    # Trading preferences specific to this profile
+    default_csv_format: Mapped[str | None] = mapped_column(String(32))  # 'tradersync', 'custom', etc.
+    
+    __table_args__ = (
+        Index("ix_profile_name", "name"),
+        Index("ix_profile_active", "is_active"),
+    )
+
+
 class Symbol(Base):
     __tablename__ = "symbols"
     symbol: Mapped[str] = mapped_column(String(16), primary_key=True)
@@ -41,7 +60,7 @@ class Symbol(Base):
 class Trade(Base):
     __tablename__ = "trades"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    profile_id: Mapped[int] = mapped_column(Integer, default=1, index=True)
+    profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"), default=1, index=True)
     trade_date: Mapped[date] = mapped_column(Date, index=True)
     symbol: Mapped[str] = mapped_column(ForeignKey("symbols.symbol"), index=True)
     side: Mapped[str] = mapped_column(String(5))  # LONG/SHORT or B/S

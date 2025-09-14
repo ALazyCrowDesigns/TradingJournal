@@ -53,7 +53,7 @@ class SymbolRepository(BaseRepository[Symbol]):
 
         with self._session_scope() as session:
             for item in symbols:
-                  data = item.model_dump() if isinstance(item, SymbolIn) else item
+                data = item.model_dump() if isinstance(item, SymbolIn) else item
 
                 symbol_key = (data.get("symbol") or "").upper()
                 if not symbol_key:

@@ -12,14 +12,16 @@ from sqlalchemy import Engine
 from .config import settings
 from .db.dao import _mk_engine
 from .repositories.price import PriceRepository
+from .repositories.profile import ProfileRepository
 from .repositories.symbol import SymbolRepository
 from .repositories.trade import TradeRepository
 from .services.analytics import AnalyticsService
 from .services.backfill_service import BackfillService
 from .services.cache import TTLCache
 from .services.fundamentals import FundamentalsService
-from .services.import_service import ImportService
+from .services.csv_import import CSVImportService
 from .services.market import MarketService
+from .services.profile_service import ProfileService
 
 
 def configure_logging() -> None:
@@ -63,6 +65,12 @@ class ApplicationContainer(containers.DeclarativeContainer):
 
     # Repositories
 
+    profile_repository = providers.Factory(
+        ProfileRepository,
+        engine=db_engine,
+        cache=cache,
+    )
+
     trade_repository = providers.Factory(
         TradeRepository,
         engine=db_engine,
@@ -82,6 +90,11 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
 
     # Services
+
+    profile_service = providers.Singleton(
+        ProfileService,
+        profile_repository=profile_repository,
+    )
 
     market_service = providers.Singleton(
         MarketService,
@@ -104,13 +117,11 @@ class ApplicationContainer(containers.DeclarativeContainer):
         cache=cache,
     )
 
-    import_service = providers.Factory(
-        ImportService,
-        trade_repository=trade_repository,
-        symbol_repository=symbol_repository,
+    csv_import_service = providers.Factory(
+        CSVImportService,
         logger=providers.Factory(
             structlog.get_logger,
-            name="import_service",
+            name="csv_import",
         ),
     )
 
