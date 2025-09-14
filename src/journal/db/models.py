@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from sqlalchemy import (
+    Boolean,
     Date,
     DateTime,
     Float,
@@ -12,7 +13,6 @@ from sqlalchemy import (
     MetaData,
     String,
     UniqueConstraint,
-    Boolean,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -36,11 +36,15 @@ class Profile(Base):
     description: Mapped[str | None] = mapped_column(String(512))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now())
-    
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(), onupdate=lambda: datetime.now()
+    )
+
     # Trading preferences specific to this profile
-    default_csv_format: Mapped[str | None] = mapped_column(String(32))  # 'tradersync', 'custom', etc.
-    
+    default_csv_format: Mapped[str | None] = mapped_column(
+        String(32)
+    )  # 'tradersync', 'custom', etc.
+
     __table_args__ = (
         Index("ix_profile_name", "name"),
         Index("ix_profile_active", "is_active"),

@@ -2,11 +2,10 @@ from typing import Any
 
 import httpx
 
-from journal.db.dao import session_scope
+from journal.db.dao import _mk_engine, session_scope
 from journal.db.models import Symbol
-from journal.services.fundamentals import FundamentalsService
 from journal.repositories.symbol import SymbolRepository
-from journal.db.dao import _mk_engine
+from journal.services.fundamentals import FundamentalsService
 
 
 def test_hydrate_missing(monkeypatch: Any) -> None:
@@ -20,13 +19,13 @@ def test_hydrate_missing(monkeypatch: Any) -> None:
     class MockClient:
         def __init__(self, *args, **kwargs):
             pass
-        
+
         def __enter__(self):
             return self
-        
+
         def __exit__(self, *args):
             pass
-        
+
         def get(self, url: str, params: dict[str, Any] | None = None) -> Any:
             class Resp:
                 status_code = 200
@@ -35,7 +34,9 @@ def test_hydrate_missing(monkeypatch: Any) -> None:
                     pass
 
                 def json(self) -> list[dict[str, Any]]:
-                    return [{"companyName": "Fake Co", "sector": "Industrials", "industry": "Tools"}]
+                    return [
+                        {"companyName": "Fake Co", "sector": "Industrials", "industry": "Tools"}
+                    ]
 
             return Resp()
 

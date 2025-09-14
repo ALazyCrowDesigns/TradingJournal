@@ -41,7 +41,7 @@ class AnalyticsService:
                 # CRITICAL: Always filter by profile_id to ensure profile isolation
                 if profile_id := filters.get("profile_id"):
                     conditions.append(Trade.profile_id == profile_id)
-                    
+
                 if symbol := filters.get("symbol"):
                     conditions.append(Trade.symbol.ilike(f"%{symbol}%"))
                 if side := filters.get("side"):
@@ -179,19 +179,19 @@ class AnalyticsService:
             base_query = select(Trade)
             if symbol:
                 base_query = base_query.where(Trade.symbol == symbol)
-            
+
             # Get basic stats with SQL aggregation
             stats_query = select(
                 func.count(Trade.id).label("count"),
                 func.max(Trade.pnl).label("max_pnl"),
                 func.min(Trade.pnl).label("min_pnl"),
             ).select_from(Trade)
-            
+
             if symbol:
                 stats_query = stats_query.where(Trade.symbol == symbol)
-            
+
             stats = session.execute(stats_query).one()
-            
+
             if stats.count == 0:
                 return {
                     "count": 0,
@@ -201,23 +201,23 @@ class AnalyticsService:
                     "consecutive_wins": 0,
                     "consecutive_losses": 0,
                 }
-            
+
             # Get best and worst trades with single queries
             best_trade_query = base_query.where(Trade.pnl == stats.max_pnl).limit(1)
             worst_trade_query = base_query.where(Trade.pnl == stats.min_pnl).limit(1)
-            
+
             best_trade = session.scalar(best_trade_query)
             worst_trade = session.scalar(worst_trade_query)
-            
+
             # For consecutive wins/losses, we still need to fetch trades ordered by date
             # But only fetch the minimal data needed
             consecutive_query = select(Trade.pnl).select_from(Trade)
             if symbol:
                 consecutive_query = consecutive_query.where(Trade.symbol == symbol)
             consecutive_query = consecutive_query.order_by(Trade.trade_date)
-            
+
             pnl_sequence = [row[0] for row in session.execute(consecutive_query).all()]
-            
+
             # Calculate consecutive wins/losses efficiently
             max_consecutive_wins = 0
             max_consecutive_losses = 0

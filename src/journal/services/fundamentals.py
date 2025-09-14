@@ -97,15 +97,16 @@ class FundamentalsService:
         """Get count of symbols by sector using SQL aggregation"""
         with self._symbol_repo._session_scope() as session:
             from sqlalchemy import func, select
+
             from ..db.models import Symbol
-            
+
             query = (
                 select(Symbol.sector, func.count(Symbol.symbol).label("count"))
                 .where(Symbol.sector.isnot(None))
                 .group_by(Symbol.sector)
                 .order_by(func.count(Symbol.symbol).desc())
             )
-            
+
             results = session.execute(query).all()
             return {row.sector: row.count for row in results}
 
@@ -114,14 +115,15 @@ class FundamentalsService:
         """Get count of symbols by industry using SQL aggregation"""
         with self._symbol_repo._session_scope() as session:
             from sqlalchemy import func, select
+
             from ..db.models import Symbol
-            
+
             query = (
                 select(Symbol.industry, func.count(Symbol.symbol).label("count"))
                 .where(Symbol.industry.isnot(None))
                 .group_by(Symbol.industry)
                 .order_by(func.count(Symbol.symbol).desc())
             )
-            
+
             results = session.execute(query).all()
             return {row.industry: row.count for row in results}

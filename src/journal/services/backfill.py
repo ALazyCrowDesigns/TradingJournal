@@ -7,12 +7,10 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from ..db.dao import (
-    get_close_from_db,
     get_closes_from_db_bulk,
     get_distinct_symbols,
     get_missing_price_dates,
     get_trade_dates_by_symbol,
-    set_prev_close,
     set_prev_close_bulk,
 )
 from .market import MarketService
@@ -58,28 +56,30 @@ def _fill_prev_close_from_db(symbol: str, dates: Iterable[date]) -> int:
     date_list = list(dates)
     if not date_list:
         return 0
-    
+
     # Prepare symbol-date pairs for previous day lookups
     prev_day_lookups = [(symbol, _prev_day(d)) for d in date_list]
-    
+
     # Bulk fetch all previous close prices
     prev_closes = get_closes_from_db_bulk(prev_day_lookups)
-    
+
     # Prepare bulk updates
     updates = []
     for d in date_list:
         prev_day_key = (symbol, _prev_day(d))
         if prev_day_key in prev_closes:
             updates.append((symbol, d, prev_closes[prev_day_key]))
-    
+
     # Bulk update
     if updates:
         return set_prev_close_bulk(updates)
-    
+
     return 0
 
 
-def backfill_symbol(symbol: str, market_service: MarketService, max_failures: int = 3) -> dict[str, int]:
+def backfill_symbol(
+    symbol: str, market_service: MarketService, max_failures: int = 3
+) -> dict[str, int]:
     plan = _make_symbol_plan(symbol)
     if not plan.missing_dates:
         # Still try to set prev_close from DB for any trades lacking it
@@ -122,6 +122,7 @@ def backfill_all_missing(market_service: MarketService, max_workers: int = 4) ->
 def main() -> None:
     import argparse
     import os
+
     from ..repositories.price import PriceRepository
 
     p = argparse.ArgumentParser(description="Backfill OHLCV + prev_close")

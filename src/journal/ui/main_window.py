@@ -5,7 +5,7 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import QObject, QRunnable, QThread, QThreadPool, QTimer, Signal, Slot, Qt
+from PySide6.QtCore import QObject, QRunnable, Qt, QThread, QThreadPool, QTimer, Signal, Slot
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
-    QSplitter,
     QStatusBar,
     QTableView,
     QTabWidget,
@@ -37,15 +36,14 @@ from .analytics_panel import AnalyticsPanel
 from .columns_dialog import ColumnsDialog
 from .editable_trades_model import EditableTradesModel
 from .prefs import (
-    load_prefs, 
-    save_prefs, 
-    get_current_profile_id, 
-    set_current_profile_id, 
-    get_profile_prefs, 
-    set_profile_prefs
+    get_current_profile_id,
+    get_profile_prefs,
+    load_prefs,
+    save_prefs,
+    set_current_profile_id,
+    set_profile_prefs,
 )
 from .profile_selector import ProfileSelectorWidget
-from .trades_model import TradesTableModel
 
 
 class Worker(QThread):
@@ -69,6 +67,7 @@ class Worker(QThread):
 
 class WorkerSignaler(QObject):
     """Helper class to emit signals from worker threads"""
+
     finished = Signal(object)
     failed = Signal(str)
 
@@ -90,7 +89,7 @@ class WorkerRunnable(QRunnable):
         self.kwargs = kwargs
         self.callback = callback
         self.error_callback = error_callback
-        
+
         # Create signaler and connect to callbacks
         self.signaler = WorkerSignaler()
         if self.callback:
@@ -123,11 +122,11 @@ class MainWindow(QMainWindow):
         self._backfill_service = container.backfill_service()
         self._trade_repo = container.trade_repository()
         self._profile_service = container.profile_service()
-        
+
         # Load preferences and initialize profile system
         self.prefs = load_prefs()
         self.current_profile_id = get_current_profile_id(self.prefs)
-        
+
         # Ensure the profile exists and is active
         try:
             self.current_profile = self._profile_service.switch_to_profile(self.current_profile_id)
@@ -137,11 +136,11 @@ class MainWindow(QMainWindow):
             self.current_profile_id = self.current_profile.id
             set_current_profile_id(self.prefs, self.current_profile_id)
             save_prefs(self.prefs)
-        
+
         # Initialize session manager for CRUD operations
         self._session_manager = SessionTransactionManager(self._trade_repo)
         self._session_persistence = SessionPersistence()
-        
+
         # Try to restore previous session
         self._restore_session_if_available()
 
@@ -151,7 +150,7 @@ class MainWindow(QMainWindow):
 
         # --- Menus
         bar = QMenuBar(self)
-        
+
         # File menu
         file_menu = bar.addMenu("&File")
         act_import = file_menu.addAction("&Import CSV…")
@@ -165,7 +164,7 @@ class MainWindow(QMainWindow):
         act_commit = file_menu.addAction("&Commit to Database")
         act_commit.setShortcut("Ctrl+Shift+S")
         act_commit.triggered.connect(self.on_commit_session)
-        
+
         # Edit menu
         edit_menu = bar.addMenu("&Edit")
         self.act_undo = edit_menu.addAction("&Undo")
@@ -190,7 +189,7 @@ class MainWindow(QMainWindow):
         edit_menu.addSeparator()
         act_rollback = edit_menu.addAction("&Rollback All Changes")
         act_rollback.triggered.connect(self.on_rollback_session)
-        
+
         # Profile menu
         profile_menu = bar.addMenu("&Profile")
         act_switch_profile = profile_menu.addAction("&Switch Profile…")
@@ -200,7 +199,7 @@ class MainWindow(QMainWindow):
         profile_menu.addSeparator()
         act_clear_data = profile_menu.addAction("&Clear Current Profile Data…")
         act_clear_data.triggered.connect(self.on_clear_current_profile_data)
-        
+
         # Data menu
         data_menu = bar.addMenu("&Data")
         act_cols = data_menu.addAction("&Columns…")
@@ -209,7 +208,7 @@ class MainWindow(QMainWindow):
         act_backfill.triggered.connect(self.on_backfill_all)
         act_open_logs = data_menu.addAction("Open &Logs Folder")
         act_open_logs.triggered.connect(self.on_open_logs)
-        
+
         self.setMenuBar(bar)
 
         # --- Profile selector and filters
@@ -220,54 +219,54 @@ class MainWindow(QMainWindow):
         # Reduce margins and spacing
         tl.setContentsMargins(5, 2, 5, 2)
         tl.setSpacing(8)
-        
+
         # Profile selector
         self.profile_selector = ProfileSelectorWidget(self._profile_service)
         self.profile_selector.profileChanged.connect(self.on_profile_changed)
         self.profile_selector.set_current_profile(self.current_profile_id)
         tl.addWidget(self.profile_selector)
-        
+
         # Separator
         separator = QFrame()
         separator.setFrameShape(QFrame.VLine)
         separator.setFrameShadow(QFrame.Sunken)
         tl.addWidget(separator)
-        
+
         self.ed_symbol = QLineEdit()
         self.ed_symbol.setPlaceholderText("Symbol contains…")
         self.ed_symbol.setMaximumHeight(28)
-        
+
         self.cb_side = QComboBox()
         self.cb_side.addItems(["", "LONG", "SHORT", "BUY", "SELL"])
         self.cb_side.setMaximumHeight(28)
-        
+
         self.dt_from = QDateEdit()
         self.dt_from.setCalendarPopup(True)
         self.dt_from.setDisplayFormat("yyyy-MM-dd")
         self.dt_from.setMaximumHeight(28)
         self.dt_from.clear()  # Start with invalid date
-        
+
         self.dt_to = QDateEdit()
         self.dt_to.setCalendarPopup(True)
         self.dt_to.setDisplayFormat("yyyy-MM-dd")
         self.dt_to.setMaximumHeight(28)
         self.dt_to.clear()  # Start with invalid date
-        
+
         self.ed_pnl_min = QLineEdit()
         self.ed_pnl_min.setPlaceholderText("PnL ≥")
         self.ed_pnl_min.setMaximumHeight(28)
-        
+
         self.ed_pnl_max = QLineEdit()
         self.ed_pnl_max.setPlaceholderText("PnL ≤")
         self.ed_pnl_max.setMaximumHeight(28)
-        
+
         self.cb_has_ohlcv = QCheckBox("Has OHLCV")
         self.cb_has_ohlcv.setMaximumHeight(28)
-        
+
         btn_apply = QPushButton("Apply")
         btn_apply.setMaximumHeight(28)
         btn_apply.clicked.connect(self.apply_filters)
-        
+
         btn_clear = QPushButton("Clear")
         btn_clear.setMaximumHeight(28)
         btn_clear.clicked.connect(self.clear_filters)
@@ -292,27 +291,27 @@ class MainWindow(QMainWindow):
 
         # --- Table and Analytics
         self.table = QTableView()
-        
+
         # Use editable model with session management
         profile_prefs = get_profile_prefs(self.prefs, self.current_profile_id)
         self.model = EditableTradesModel(
             trade_repository=self._trade_repo,
             session_manager=self._session_manager,
-            page_size=int(profile_prefs.get("page_size", 100))
+            page_size=int(profile_prefs.get("page_size", 100)),
         )
         self.table.setModel(self.model)
         self.table.setSortingEnabled(True)
         self.table.setSelectionBehavior(QTableView.SelectRows)
         self.table.setSelectionMode(QTableView.ExtendedSelection)  # Enable multi-selection
         self.table.setAlternatingRowColors(True)
-        
+
         # Enable context menu for right-click operations
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self._show_trades_context_menu)
-        
+
         # Connect model signals
         self.model.sessionChanged.connect(self._update_menu_states)
-        
+
         # Connect selection changes to update status bar
         self.table.selectionModel().selectionChanged.connect(self._update_selection_info)
 
@@ -350,11 +349,11 @@ class MainWindow(QMainWindow):
 
         # Column visibility (immediate)
         self.apply_column_visibility()
-        
+
         # Update menu states and window title
         self._update_menu_states()
         self._update_window_title()
-        
+
         # Defer analytics loading for better startup performance
         self._analytics_loaded = False
         QTimer.singleShot(100, self._delayed_analytics_load)
@@ -374,6 +373,7 @@ class MainWindow(QMainWindow):
             date_val = date_edit.date().toPython()
             # Check if it's a reasonable date (not the default 2000-01-01)
             from datetime import date
+
             if date_val <= date(2000, 1, 1):
                 return None
             return date_val
@@ -389,7 +389,9 @@ class MainWindow(QMainWindow):
             "has_ohlcv": self.cb_has_ohlcv.isChecked(),
         }
         # clean Nones (but keep profile_id and has_ohlcv)
-        return {k: v for k, v in f.items() if v not in ("", None) or k in ("profile_id", "has_ohlcv")}
+        return {
+            k: v for k, v in f.items() if v not in ("", None) or k in ("profile_id", "has_ohlcv")
+        }
 
     def set_busy(self, on: bool, msg: str = "") -> None:
         self.status_msg.setText(msg or ("Working…" if on else "Ready"))
@@ -507,51 +509,58 @@ class MainWindow(QMainWindow):
             ins = out.get("inserted", 0)
             dup = out.get("duplicates_skipped", 0)
             err = out.get("errors", 0)
-            
+
             # Show import results
             QMessageBox.information(
                 self, "Import done", f"Inserted: {ins}\nDuplicates skipped: {dup}\nErrors: {err}"
             )
-            
+
             # Refresh session manager to see new database data
             try:
                 # First, refresh the session manager's view of the database
                 self._session_manager.refresh_from_database()
-                
+
                 # Clear analytics cache to ensure fresh stats
-                if hasattr(self._analytics_service, '_cache') and self._analytics_service._cache:
+                if hasattr(self._analytics_service, "_cache") and self._analytics_service._cache:
                     self._analytics_service._cache.clear()
                     print("Analytics cache cleared - fresh stats will be calculated")
-                
+
                 # Then reload the model with fresh data
                 self.model.reload(reset=True)
-                
+
                 # Also refresh analytics to show updated stats
                 self.refresh_analytics()
-                
+
             except Exception as e:
                 print(f"Error during model reload: {e}")
                 # Try to show a warning but don't crash
-                QMessageBox.warning(self, "Model Reload Error", 
-                                  f"Data was imported successfully, but there was an error refreshing the view: {e}\n\n"
-                                  f"Please restart the application to see the imported data.")
+                QMessageBox.warning(
+                    self,
+                    "Model Reload Error",
+                    f"Data was imported successfully, but there was an error refreshing the view: {e}\n\n"
+                    f"Please restart the application to see the imported data.",
+                )
                 return
-            
+
             # Prompt backfill
             if (
                 QMessageBox.question(self, "Backfill", "Run backfill for all missing now?")
                 == QMessageBox.Yes
             ):
                 self.on_backfill_all()
-                
+
         except Exception as e:
             # Catch any other errors in the post-import process
             print(f"Error in _after_import: {e}")
             import traceback
+
             traceback.print_exc()
-            QMessageBox.critical(self, "Post-Import Error", 
-                               f"Import completed, but there was an error in post-processing: {e}\n\n"
-                               f"Your data has been saved. Please restart the application.")
+            QMessageBox.critical(
+                self,
+                "Post-Import Error",
+                f"Import completed, but there was an error in post-processing: {e}\n\n"
+                f"Your data has been saved. Please restart the application.",
+            )
             self.set_busy(False, "Ready")
 
     def on_backfill_all(self) -> None:
@@ -623,186 +632,191 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Export", f"Exported to {path}")
         except Exception as e:
             QMessageBox.critical(self, "Export failed", str(e))
-    
+
     # --- Context Menu ---
-    
+
     def _show_trades_context_menu(self, position) -> None:
         """Show context menu for trades table"""
         if not self.table.indexAt(position).isValid():
             return
-        
+
         selection = self.table.selectionModel()
         selected_rows = [index.row() for index in selection.selectedRows()]
-        
+
         menu = QMenu(self)
-        
+
         # Add actions based on selection
         if len(selected_rows) == 1:
             menu.addAction("Duplicate Trade", self.on_duplicate_trade)
             menu.addSeparator()
-        
+
         if selected_rows:
             if len(selected_rows) == 1:
                 menu.addAction("Delete Trade", self.on_delete_selected)
             else:
                 menu.addAction(f"Delete {len(selected_rows)} Trades", self.on_delete_selected)
             menu.addSeparator()
-        
+
         # Always available actions
         menu.addAction("New Trade", self.on_new_trade)
         menu.addSeparator()
         menu.addAction("Select All", lambda: self.table.selectAll())
-        
+
         # Show menu at cursor position
         menu.exec(self.table.mapToGlobal(position))
-    
+
     def _update_selection_info(self) -> None:
         """Update status bar with selection information"""
         selection = self.table.selectionModel()
         selected_rows = [index.row() for index in selection.selectedRows()]
-        
+
         # If we have unsaved changes, show that info first
         if self.model.has_unsaved_changes():
             session_info = self.model.get_session_info()
-            pending = session_info.get('pending_creates', 0) + session_info.get('pending_updates', 0) + session_info.get('pending_deletes', 0)
+            pending = (
+                session_info.get("pending_creates", 0)
+                + session_info.get("pending_updates", 0)
+                + session_info.get("pending_deletes", 0)
+            )
             base_msg = f"{pending} unsaved changes"
         else:
             base_msg = "Ready"
-        
+
         # Add selection info if any rows are selected
         if selected_rows:
             total_rows = self.model.rowCount()
             if len(selected_rows) == 1:
-                selection_msg = f"1 row selected"
+                selection_msg = "1 row selected"
             else:
                 selection_msg = f"{len(selected_rows)} rows selected"
-            
+
             if total_rows > 0:
                 selection_msg += f" of {total_rows}"
-            
+
             self.status_msg.setText(f"{base_msg} - {selection_msg}")
         else:
             self.status_msg.setText(base_msg)
-    
+
     # --- CRUD Operations ---
-    
+
     def _update_menu_states(self) -> None:
         """Update menu item states based on session state"""
         self.act_undo.setEnabled(self.model.can_undo())
         self.act_redo.setEnabled(self.model.can_redo())
-        
+
         # Update undo/redo text with descriptions
         undo_desc = self._session_manager.get_undo_description()
         redo_desc = self._session_manager.get_redo_description()
-        
+
         if undo_desc:
             self.act_undo.setText(f"&Undo {undo_desc}")
         else:
             self.act_undo.setText("&Undo")
-            
+
         if redo_desc:
             self.act_redo.setText(f"&Redo {redo_desc}")
         else:
             self.act_redo.setText("&Redo")
-        
+
         # Update status bar with session and selection info
         self._update_selection_info()
-    
+
     def on_save_session(self) -> None:
         """Save current session (checkpoint, but not to database)"""
         try:
             # Save session state to memory
             result = self.model.save_session()
-            
+
             # Also persist to disk
             self._auto_save_session()
-            
+
             QMessageBox.information(
-                self, 
-                "Session Saved", 
-                f"Session checkpoint created and saved to disk.\n\n"
-                f"Note: Changes are not yet committed to database.\n"
-                f"Use 'Commit to Database' to make changes permanent."
+                self,
+                "Session Saved",
+                "Session checkpoint created and saved to disk.\n\n"
+                "Note: Changes are not yet committed to database.\n"
+                "Use 'Commit to Database' to make changes permanent.",
             )
         except Exception as e:
             QMessageBox.critical(self, "Save Failed", f"Failed to save session: {e}")
-    
+
     def on_commit_session(self) -> None:
         """Commit all changes to database"""
         if not self.model.has_unsaved_changes():
             QMessageBox.information(self, "No Changes", "No changes to commit.")
             return
-        
+
         # Confirm commit
         session_info = self.model.get_session_info()
-        creates = session_info.get('pending_creates', 0)
-        updates = session_info.get('pending_updates', 0)
-        deletes = session_info.get('pending_deletes', 0)
-        
-        msg = f"Commit the following changes to database?\n\n"
+        creates = session_info.get("pending_creates", 0)
+        updates = session_info.get("pending_updates", 0)
+        deletes = session_info.get("pending_deletes", 0)
+
+        msg = "Commit the following changes to database?\n\n"
         msg += f"• {creates} new trades\n"
         msg += f"• {updates} updated trades\n"
         msg += f"• {deletes} deleted trades\n\n"
         msg += "This action cannot be undone after commit."
-        
+
         reply = QMessageBox.question(
-            self, "Confirm Commit", msg, 
-            QMessageBox.Yes | QMessageBox.No, 
-            QMessageBox.No
+            self, "Confirm Commit", msg, QMessageBox.Yes | QMessageBox.No, QMessageBox.No
         )
-        
+
         if reply != QMessageBox.Yes:
             return
-        
+
         try:
             self.set_busy(True, "Committing changes to database...")
             result = self.model.commit_session()
             self.set_busy(False)
-            
-            if result.get('errors', 0) > 0:
+
+            if result.get("errors", 0) > 0:
                 QMessageBox.warning(
-                    self, "Commit Completed with Errors",
+                    self,
+                    "Commit Completed with Errors",
                     f"Committed with some errors:\n"
                     f"• Created: {result.get('created', 0)}\n"
                     f"• Updated: {result.get('updated', 0)}\n"
                     f"• Deleted: {result.get('deleted', 0)}\n"
-                    f"• Errors: {result.get('errors', 0)}"
+                    f"• Errors: {result.get('errors', 0)}",
                 )
             else:
                 QMessageBox.information(
-                    self, "Commit Successful",
+                    self,
+                    "Commit Successful",
                     f"Successfully committed changes:\n"
                     f"• Created: {result.get('created', 0)}\n"
                     f"• Updated: {result.get('updated', 0)}\n"
-                    f"• Deleted: {result.get('deleted', 0)}"
+                    f"• Deleted: {result.get('deleted', 0)}",
                 )
-            
+
             # Refresh analytics after commit
             self.refresh_analytics()
-            
+
         except Exception as e:
             self.set_busy(False)
             QMessageBox.critical(self, "Commit Failed", f"Failed to commit changes: {e}")
-    
+
     def on_rollback_session(self) -> None:
         """Rollback all session changes"""
         if not self.model.has_unsaved_changes():
             QMessageBox.information(self, "No Changes", "No changes to rollback.")
             return
-        
+
         reply = QMessageBox.question(
-            self, "Confirm Rollback",
+            self,
+            "Confirm Rollback",
             "Rollback all changes in this session?\n\n"
             "This will discard all unsaved changes and cannot be undone.",
             QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
+            QMessageBox.No,
         )
-        
+
         if reply == QMessageBox.Yes:
             self.model.rollback_session()
             QMessageBox.information(self, "Rollback Complete", "All changes have been discarded.")
             self.refresh_analytics()
-    
+
     def on_undo(self) -> None:
         """Undo last operation"""
         description = self.model.undo()
@@ -810,7 +824,7 @@ class MainWindow(QMainWindow):
             self.status_msg.setText(f"Undone: {description}")
         else:
             self.status_msg.setText("Nothing to undo")
-    
+
     def on_redo(self) -> None:
         """Redo last undone operation"""
         description = self.model.redo()
@@ -818,99 +832,102 @@ class MainWindow(QMainWindow):
             self.status_msg.setText(f"Redone: {description}")
         else:
             self.status_msg.setText("Nothing to redo")
-    
+
     def on_new_trade(self) -> None:
         """Create a new trade"""
         try:
             trade_id = self.model.create_trade()
             self.status_msg.setText(f"Created new trade: {trade_id[:8]}...")
-            
+
             # Scroll to the new trade (it will be at the top with default sorting)
             self.table.scrollToTop()
-            
+
         except Exception as e:
             QMessageBox.critical(self, "Create Trade Failed", f"Failed to create new trade: {e}")
-    
+
     def on_duplicate_trade(self) -> None:
         """Duplicate selected trade"""
         selection = self.table.selectionModel()
         if not selection.hasSelection():
             QMessageBox.information(self, "No Selection", "Please select a trade to duplicate.")
             return
-        
+
         selected_rows = [index.row() for index in selection.selectedRows()]
         if len(selected_rows) > 1:
-            QMessageBox.information(self, "Multiple Selection", f"Please select exactly one trade to duplicate.\n\nCurrently selected: {len(selected_rows)} trades")
+            QMessageBox.information(
+                self,
+                "Multiple Selection",
+                f"Please select exactly one trade to duplicate.\n\nCurrently selected: {len(selected_rows)} trades",
+            )
             return
-        
+
         try:
             row_idx = selected_rows[0]
             new_trade_id = self.model.duplicate_trade(row_idx)
-            
+
             if new_trade_id:
                 self.status_msg.setText(f"Duplicated trade: {new_trade_id[:8]}...")
                 self.table.scrollToTop()
             else:
-                QMessageBox.warning(self, "Duplicate Failed", "Failed to duplicate the selected trade.")
-                
+                QMessageBox.warning(
+                    self, "Duplicate Failed", "Failed to duplicate the selected trade."
+                )
+
         except Exception as e:
             QMessageBox.critical(self, "Duplicate Failed", f"Failed to duplicate trade: {e}")
-    
+
     def on_delete_selected(self) -> None:
         """Delete selected trades"""
         selection = self.table.selectionModel()
         if not selection.hasSelection():
             QMessageBox.information(self, "No Selection", "Please select trades to delete.")
             return
-        
+
         selected_rows = [index.row() for index in selection.selectedRows()]
-        
+
         # Confirm deletion
         if len(selected_rows) == 1:
             msg = "Delete the selected trade?"
         else:
             msg = f"Delete {len(selected_rows)} selected trades?"
-        
+
         reply = QMessageBox.question(
-            self, "Confirm Delete", msg,
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
+            self, "Confirm Delete", msg, QMessageBox.Yes | QMessageBox.No, QMessageBox.No
         )
-        
+
         if reply != QMessageBox.Yes:
             return
-        
+
         try:
             deleted_count = self.model.delete_selected_trades(selected_rows)
-            
+
             if deleted_count > 0:
                 self.status_msg.setText(f"Deleted {deleted_count} trade(s)")
             else:
                 QMessageBox.warning(self, "Delete Failed", "No trades were deleted.")
-                
+
         except Exception as e:
             QMessageBox.critical(self, "Delete Failed", f"Failed to delete trades: {e}")
-    
+
     # --- Session Persistence ---
-    
+
     def _restore_session_if_available(self) -> None:
         """Check for and optionally restore a previous session"""
         if not self._session_persistence.has_saved_session():
             return
-        
+
         session_info = self._session_persistence.get_session_info()
         if not session_info or not session_info.get("has_unsaved_changes", False):
             # No unsaved changes, just clear the old session file
             self._session_persistence.clear_session_file()
             return
-        
+
         # Show restore dialog
         saved_at = session_info.get("saved_at", "Unknown")
-        num_changes = (
-            session_info.get("num_session_trades", 0) + 
-            session_info.get("num_deleted_trades", 0)
+        num_changes = session_info.get("num_session_trades", 0) + session_info.get(
+            "num_deleted_trades", 0
         )
-        
+
         msg = (
             f"Found a previous session with unsaved changes:\n\n"
             f"• Saved at: {saved_at}\n"
@@ -918,13 +935,15 @@ class MainWindow(QMainWindow):
             f"• Commands in history: {session_info.get('num_commands', 0)}\n\n"
             f"Would you like to restore this session?"
         )
-        
+
         reply = QMessageBox.question(
-            self, "Restore Previous Session?", msg,
+            self,
+            "Restore Previous Session?",
+            msg,
             QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.Yes
+            QMessageBox.Yes,
         )
-        
+
         if reply == QMessageBox.Yes:
             if self._session_persistence.load_session_state(self._session_manager):
                 self.status_msg.setText("Previous session restored")
@@ -934,25 +953,26 @@ class MainWindow(QMainWindow):
         else:
             # User chose not to restore, clear the session file
             self._session_persistence.clear_session_file()
-    
+
     def _auto_save_session(self) -> None:
         """Auto-save session state"""
         if self._session_manager.has_unsaved_changes():
             self._session_persistence.save_session_state(self._session_manager)
-    
+
     def closeEvent(self, event) -> None:
         """Handle application close event"""
         # Check for unsaved changes
         if self._session_manager.has_unsaved_changes():
             reply = QMessageBox.question(
-                self, "Unsaved Changes",
+                self,
+                "Unsaved Changes",
                 "You have unsaved changes. What would you like to do?\n\n"
                 "• Save Session: Keep changes for next time\n"
-                "• Commit: Save changes to database permanently\n" 
+                "• Commit: Save changes to database permanently\n"
                 "• Discard: Lose all changes",
-                QMessageBox.Save | QMessageBox.Apply | QMessageBox.Discard | QMessageBox.Cancel
+                QMessageBox.Save | QMessageBox.Apply | QMessageBox.Discard | QMessageBox.Cancel,
             )
-            
+
             if reply == QMessageBox.Cancel:
                 event.ignore()
                 return
@@ -963,11 +983,12 @@ class MainWindow(QMainWindow):
                 # Commit to database
                 try:
                     result = self._session_manager.commit()
-                    if result.get('errors', 0) > 0:
+                    if result.get("errors", 0) > 0:
                         QMessageBox.warning(
-                            self, "Commit Errors",
+                            self,
+                            "Commit Errors",
                             f"Some changes could not be committed:\n"
-                            f"Errors: {result.get('errors', 0)}"
+                            f"Errors: {result.get('errors', 0)}",
                         )
                 except Exception as e:
                     QMessageBox.critical(self, "Commit Failed", f"Failed to commit: {e}")
@@ -981,29 +1002,29 @@ class MainWindow(QMainWindow):
         else:
             # No changes, just clear any session file
             self._session_persistence.clear_session_file()
-        
+
         event.accept()
-    
+
     # --- Profile Management ---
-    
+
     def _update_window_title(self) -> None:
         """Update window title to include current profile"""
         title = f"Trading Journal - {self.current_profile.name}"
         self.setWindowTitle(title)
-    
+
     def on_profile_changed(self, profile_id: int) -> None:
         """Handle profile change from profile selector"""
         if profile_id != self.current_profile_id:
             self._switch_to_profile(profile_id)
-    
+
     def on_switch_profile(self) -> None:
         """Handle switch profile menu action"""
         self.profile_selector.show_profile_selection_dialog()
-    
+
     def on_manage_profiles(self) -> None:
         """Handle manage profiles menu action"""
         self.profile_selector._open_profile_manager()
-    
+
     def on_clear_current_profile_data(self) -> None:
         """Handle clear current profile data menu action"""
         # Get current trade count for confirmation
@@ -1012,85 +1033,89 @@ class MainWindow(QMainWindow):
             trade_count = summary.get("trade_count", 0)
         except Exception:
             trade_count = 0
-        
+
         if trade_count == 0:
             QMessageBox.information(
-                self, "No Data", 
-                f"Current profile '{self.current_profile.name}' has no trades to delete."
+                self,
+                "No Data",
+                f"Current profile '{self.current_profile.name}' has no trades to delete.",
             )
             return
-        
+
         # Confirmation dialog with strong warning
         reply = QMessageBox.question(
-            self, "Confirm Clear All Data",
+            self,
+            "Confirm Clear All Data",
             f"⚠️ WARNING: This will permanently delete ALL DATA for the current profile '{self.current_profile.name}':\n\n"
             f"• {trade_count} trades will be permanently deleted\n"
             f"• The profile itself will remain intact\n"
             f"• This action CANNOT be undone!\n\n"
             f"Are you absolutely sure you want to clear all data for this profile?",
             QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
+            QMessageBox.No,
         )
-        
+
         if reply == QMessageBox.Yes:
             # Double confirmation for safety
             reply2 = QMessageBox.question(
-                self, "Final Confirmation",
+                self,
+                "Final Confirmation",
                 f"Last chance to cancel!\n\n"
                 f"This will delete {trade_count} trades from '{self.current_profile.name}'.\n\n"
                 f"Proceed with data deletion?",
                 QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
+                QMessageBox.No,
             )
-            
+
             if reply2 == QMessageBox.Yes:
                 try:
                     self.set_busy(True, "Clearing profile data...")
                     result = self._profile_service.delete_profile_data(self.current_profile_id)
-                    trades_deleted = result.get('trades_deleted', 0)
-                    
+                    trades_deleted = result.get("trades_deleted", 0)
+
                     self.set_busy(False)
-                    
+
                     QMessageBox.information(
-                        self, "Data Cleared",
+                        self,
+                        "Data Cleared",
                         f"Successfully cleared all data for profile '{self.current_profile.name}'.\n\n"
-                        f"Trades deleted: {trades_deleted}"
+                        f"Trades deleted: {trades_deleted}",
                     )
-                    
+
                     # Refresh the data view and analytics
                     self.model.reload(reset=True)
                     self.refresh_analytics()
-                    
+
                 except Exception as e:
                     self.set_busy(False)
                     QMessageBox.critical(self, "Error", f"Failed to clear profile data: {e}")
-    
+
     def _switch_to_profile(self, profile_id: int) -> None:
         """Switch to a different profile"""
         try:
             # Save current profile preferences
             self.save_prefs_now()
-            
+
             # Switch to new profile
             self.current_profile = self._profile_service.switch_to_profile(profile_id)
             self.current_profile_id = profile_id
-            
+
             # Update preferences
             set_current_profile_id(self.prefs, profile_id)
             save_prefs(self.prefs)
-            
+
             # Update UI
             self._update_window_title()
             self.restore_prefs()
             self.apply_column_visibility()
-            
+
             # Reload data for new profile
             self.model.setFilters(self.current_filters())
             self.model.reload(reset=True)
             self.refresh_analytics()
-            
+
             self.status_msg.setText(f"Switched to profile: {self.current_profile.name}")
-            
+
         except Exception as e:
             QMessageBox.critical(self, "Profile Switch Error", f"Failed to switch profile: {e}")
             # Revert profile selector

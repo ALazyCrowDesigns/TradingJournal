@@ -89,23 +89,25 @@ def set_current_profile_id(prefs: dict[str, Any], profile_id: int) -> None:
 def get_profile_prefs(prefs: dict[str, Any], profile_id: int) -> dict[str, Any]:
     """Get preferences for a specific profile"""
     profile_key = str(profile_id)
-    
+
     # If profile preferences don't exist, create them from defaults
     if profile_key not in prefs.get("profiles", {}):
         if "profiles" not in prefs:
             prefs["profiles"] = {}
         prefs["profiles"][profile_key] = prefs["default_profile_prefs"].copy()
-    
+
     return prefs["profiles"][profile_key]
 
 
-def set_profile_prefs(prefs: dict[str, Any], profile_id: int, profile_prefs: dict[str, Any]) -> None:
+def set_profile_prefs(
+    prefs: dict[str, Any], profile_id: int, profile_prefs: dict[str, Any]
+) -> None:
     """Set preferences for a specific profile"""
     profile_key = str(profile_id)
-    
+
     if "profiles" not in prefs:
         prefs["profiles"] = {}
-    
+
     prefs["profiles"][profile_key] = profile_prefs
 
 
@@ -118,7 +120,7 @@ def set_global_pref(prefs: dict[str, Any], key: str, value: Any) -> None:
     """Set a global preference"""
     if "global" not in prefs:
         prefs["global"] = {}
-    
+
     prefs["global"][key] = value
 
 
@@ -129,19 +131,25 @@ def migrate_old_prefs(prefs: dict[str, Any]) -> dict[str, Any]:
         # This is old format, migrate to new format
         old_prefs = prefs.copy()
         new_prefs = _DEFAULTS.copy()
-        
+
         # Move old preferences to profile 1
         profile_1_prefs = {
-            "columns_visible": old_prefs.get("columns_visible", new_prefs["default_profile_prefs"]["columns_visible"]),
+            "columns_visible": old_prefs.get(
+                "columns_visible", new_prefs["default_profile_prefs"]["columns_visible"]
+            ),
             "filters": old_prefs.get("filters", new_prefs["default_profile_prefs"]["filters"]),
-            "page_size": old_prefs.get("page_size", new_prefs["default_profile_prefs"]["page_size"]),
+            "page_size": old_prefs.get(
+                "page_size", new_prefs["default_profile_prefs"]["page_size"]
+            ),
             "order_by": old_prefs.get("order_by", new_prefs["default_profile_prefs"]["order_by"]),
-            "order_dir": old_prefs.get("order_dir", new_prefs["default_profile_prefs"]["order_dir"]),
+            "order_dir": old_prefs.get(
+                "order_dir", new_prefs["default_profile_prefs"]["order_dir"]
+            ),
         }
-        
+
         new_prefs["profiles"]["1"] = profile_1_prefs
         new_prefs["current_profile_id"] = 1
-        
+
         return new_prefs
-    
+
     return prefs

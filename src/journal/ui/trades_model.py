@@ -129,15 +129,15 @@ class TradesTableModel(QAbstractTableModel):
 
         for trade_data, price_data in trades_with_prices:
             # Access trade attributes from dictionary
-            trade_date = trade_data['trade_date']
-            symbol = trade_data['symbol']
-            side = trade_data['side']
-            size = trade_data['size']
-            entry = trade_data['entry']
-            exit = trade_data['exit']
-            pnl = trade_data['pnl']
-            return_pct = trade_data['return_pct']
-            prev_close = trade_data['prev_close']
+            trade_date = trade_data["trade_date"]
+            symbol = trade_data["symbol"]
+            side = trade_data["side"]
+            size = trade_data["size"]
+            entry = trade_data["entry"]
+            exit = trade_data["exit"]
+            pnl = trade_data["pnl"]
+            return_pct = trade_data["return_pct"]
+            prev_close = trade_data["prev_close"]
 
             # Calculate derived fields
             gap_pct = None
@@ -145,13 +145,13 @@ class TradesTableModel(QAbstractTableModel):
             closechg_pct = None
 
             if price_data and prev_close:
-                gap_pct = (price_data['o'] - prev_close) / prev_close * 100
-                if price_data['low'] > 0:
-                    range_pct = (price_data['h'] - price_data['low']) / price_data['low'] * 100
-                closechg_pct = (price_data['c'] - prev_close) / prev_close * 100
+                gap_pct = (price_data["o"] - prev_close) / prev_close * 100
+                if price_data["low"] > 0:
+                    range_pct = (price_data["h"] - price_data["low"]) / price_data["low"] * 100
+                closechg_pct = (price_data["c"] - prev_close) / prev_close * 100
 
             row = [
-                trade_date.strftime('%Y-%m-%d') if trade_date else '',
+                trade_date.strftime("%Y-%m-%d") if trade_date else "",
                 symbol,
                 side,
                 size,
@@ -160,11 +160,11 @@ class TradesTableModel(QAbstractTableModel):
                 pnl,
                 return_pct,
                 prev_close,
-                price_data['o'] if price_data else None,
-                price_data['h'] if price_data else None,
-                price_data['low'] if price_data else None,
-                price_data['c'] if price_data else None,
-                price_data['v'] if price_data else None,
+                price_data["o"] if price_data else None,
+                price_data["h"] if price_data else None,
+                price_data["low"] if price_data else None,
+                price_data["c"] if price_data else None,
+                price_data["v"] if price_data else None,
                 gap_pct,
                 range_pct,
                 closechg_pct,
@@ -186,7 +186,7 @@ class TradesTableModel(QAbstractTableModel):
             for trade in trades:
                 # Merge the trade into the current session to access its attributes
                 merged_trade = session.merge(trade)
-                
+
                 # Access trade attributes from the merged object
                 trade_date = merged_trade.trade_date
                 symbol = merged_trade.symbol
@@ -217,7 +217,7 @@ class TradesTableModel(QAbstractTableModel):
                     closechg_pct = (price.c - prev_close) / prev_close * 100
 
                 row = [
-                    trade_date.strftime('%Y-%m-%d') if trade_date else '',
+                    trade_date.strftime("%Y-%m-%d") if trade_date else "",
                     symbol,
                     side,
                     size,

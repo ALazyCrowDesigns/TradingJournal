@@ -10,7 +10,6 @@ from typing import Any
 
 from sqlalchemy import Engine, and_, asc, desc, func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy.orm import joinedload
 
 from ..db.models import DailyPrice, Trade
 from ..services.cache import TTLCache
@@ -119,27 +118,27 @@ class TradeRepository(BaseRepository[Trade]):
 
             # Execute and extract data while in session context to avoid detached instance errors
             trades_result = list(session.scalars(query).all())
-            
+
             # Convert to dictionaries to avoid detached instance errors
             trades_data = []
             for trade in trades_result:
                 trade_dict = {
-                    'id': trade.id,
-                    'profile_id': trade.profile_id,
-                    'trade_date': trade.trade_date,
-                    'symbol': trade.symbol,
-                    'side': trade.side,
-                    'size': trade.size,
-                    'entry': trade.entry,
-                    'exit': trade.exit,
-                    'pnl': trade.pnl,
-                    'return_pct': trade.return_pct,
-                    'notes': trade.notes,
-                    'prev_close': trade.prev_close,
-                    'created_at': trade.created_at,
+                    "id": trade.id,
+                    "profile_id": trade.profile_id,
+                    "trade_date": trade.trade_date,
+                    "symbol": trade.symbol,
+                    "side": trade.side,
+                    "size": trade.size,
+                    "entry": trade.entry,
+                    "exit": trade.exit,
+                    "pnl": trade.pnl,
+                    "return_pct": trade.return_pct,
+                    "notes": trade.notes,
+                    "prev_close": trade.prev_close,
+                    "created_at": trade.created_at,
                 }
                 trades_data.append(trade_dict)
-            
+
             result = (trades_data, total)
 
             # Cache the result
@@ -158,7 +157,9 @@ class TradeRepository(BaseRepository[Trade]):
     ) -> tuple[list[tuple[Trade, DailyPrice | None]], int]:
         """Get paginated trades with their daily prices in a single query"""
         # Build cache key
-        cache_key = f"trades:paginated_prices:{limit}:{offset}:{order_by}:{order_dir}:{hash(str(filters))}"
+        cache_key = (
+            f"trades:paginated_prices:{limit}:{offset}:{order_by}:{order_dir}:{hash(str(filters))}"
+        )
 
         # Try cache first
         if self._cache:
@@ -216,7 +217,9 @@ class TradeRepository(BaseRepository[Trade]):
                 if filters and filters.get("has_ohlcv"):
                     count_query = count_query.join(
                         DailyPrice,
-                        and_(DailyPrice.symbol == Trade.symbol, DailyPrice.date == Trade.trade_date),
+                        and_(
+                            DailyPrice.symbol == Trade.symbol, DailyPrice.date == Trade.trade_date
+                        ),
                     )
                 count_query = count_query.where(and_(*conditions))
             total = session.scalar(count_query) or 0
@@ -233,40 +236,40 @@ class TradeRepository(BaseRepository[Trade]):
 
             # Execute and extract data while in session context
             results = list(session.execute(query).all())
-            
+
             # Extract data to dictionaries to avoid detached instance errors
             trades_with_prices = []
             for trade, price in results:
                 trade_data = {
-                    'id': trade.id,
-                    'profile_id': trade.profile_id,
-                    'trade_date': trade.trade_date,
-                    'symbol': trade.symbol,
-                    'side': trade.side,
-                    'size': trade.size,
-                    'entry': trade.entry,
-                    'exit': trade.exit,
-                    'pnl': trade.pnl,
-                    'return_pct': trade.return_pct,
-                    'notes': trade.notes,
-                    'prev_close': trade.prev_close,
-                    'created_at': trade.created_at,
+                    "id": trade.id,
+                    "profile_id": trade.profile_id,
+                    "trade_date": trade.trade_date,
+                    "symbol": trade.symbol,
+                    "side": trade.side,
+                    "size": trade.size,
+                    "entry": trade.entry,
+                    "exit": trade.exit,
+                    "pnl": trade.pnl,
+                    "return_pct": trade.return_pct,
+                    "notes": trade.notes,
+                    "prev_close": trade.prev_close,
+                    "created_at": trade.created_at,
                 }
-                
+
                 price_data = None
                 if price:
                     price_data = {
-                        'symbol': price.symbol,
-                        'date': price.date,
-                        'o': price.o,
-                        'h': price.h,
-                        'low': price.low,
-                        'c': price.c,
-                        'v': price.v,
+                        "symbol": price.symbol,
+                        "date": price.date,
+                        "o": price.o,
+                        "h": price.h,
+                        "low": price.low,
+                        "c": price.c,
+                        "v": price.v,
                     }
-                
+
                 trades_with_prices.append((trade_data, price_data))
-            
+
             result = (trades_with_prices, total)
 
             # Cache the result
@@ -285,27 +288,27 @@ class TradeRepository(BaseRepository[Trade]):
                 query = query.limit(limit)
 
             trades_result = list(session.scalars(query).all())
-            
+
             # Convert to dictionaries to avoid detached instance errors
             trades_data = []
             for trade in trades_result:
                 trade_dict = {
-                    'id': trade.id,
-                    'profile_id': trade.profile_id,
-                    'trade_date': trade.trade_date,
-                    'symbol': trade.symbol,
-                    'side': trade.side,
-                    'size': trade.size,
-                    'entry': trade.entry,
-                    'exit': trade.exit,
-                    'pnl': trade.pnl,
-                    'return_pct': trade.return_pct,
-                    'notes': trade.notes,
-                    'prev_close': trade.prev_close,
-                    'created_at': trade.created_at,
+                    "id": trade.id,
+                    "profile_id": trade.profile_id,
+                    "trade_date": trade.trade_date,
+                    "symbol": trade.symbol,
+                    "side": trade.side,
+                    "size": trade.size,
+                    "entry": trade.entry,
+                    "exit": trade.exit,
+                    "pnl": trade.pnl,
+                    "return_pct": trade.return_pct,
+                    "notes": trade.notes,
+                    "prev_close": trade.prev_close,
+                    "created_at": trade.created_at,
                 }
                 trades_data.append(trade_dict)
-            
+
             return trades_data
 
     def get_by_symbol(self, symbol: str, limit: int | None = None) -> list[dict]:
@@ -318,27 +321,27 @@ class TradeRepository(BaseRepository[Trade]):
                 query = query.limit(limit)
 
             trades_result = list(session.scalars(query).all())
-            
+
             # Convert to dictionaries to avoid detached instance errors
             trades_data = []
             for trade in trades_result:
                 trade_dict = {
-                    'id': trade.id,
-                    'profile_id': trade.profile_id,
-                    'trade_date': trade.trade_date,
-                    'symbol': trade.symbol,
-                    'side': trade.side,
-                    'size': trade.size,
-                    'entry': trade.entry,
-                    'exit': trade.exit,
-                    'pnl': trade.pnl,
-                    'return_pct': trade.return_pct,
-                    'notes': trade.notes,
-                    'prev_close': trade.prev_close,
-                    'created_at': trade.created_at,
+                    "id": trade.id,
+                    "profile_id": trade.profile_id,
+                    "trade_date": trade.trade_date,
+                    "symbol": trade.symbol,
+                    "side": trade.side,
+                    "size": trade.size,
+                    "entry": trade.entry,
+                    "exit": trade.exit,
+                    "pnl": trade.pnl,
+                    "return_pct": trade.return_pct,
+                    "notes": trade.notes,
+                    "prev_close": trade.prev_close,
+                    "created_at": trade.created_at,
                 }
                 trades_data.append(trade_dict)
-            
+
             return trades_data
 
     def get_date_range(self, start_date: date, end_date: date) -> list[dict]:
@@ -348,29 +351,29 @@ class TradeRepository(BaseRepository[Trade]):
                 and_(Trade.trade_date >= start_date, Trade.trade_date <= end_date)
             )
             query = query.order_by(desc(Trade.trade_date))
-            
+
             trades_result = list(session.scalars(query).all())
-            
+
             # Convert to dictionaries to avoid detached instance errors
             trades_data = []
             for trade in trades_result:
                 trade_dict = {
-                    'id': trade.id,
-                    'profile_id': trade.profile_id,
-                    'trade_date': trade.trade_date,
-                    'symbol': trade.symbol,
-                    'side': trade.side,
-                    'size': trade.size,
-                    'entry': trade.entry,
-                    'exit': trade.exit,
-                    'pnl': trade.pnl,
-                    'return_pct': trade.return_pct,
-                    'notes': trade.notes,
-                    'prev_close': trade.prev_close,
-                    'created_at': trade.created_at,
+                    "id": trade.id,
+                    "profile_id": trade.profile_id,
+                    "trade_date": trade.trade_date,
+                    "symbol": trade.symbol,
+                    "side": trade.side,
+                    "size": trade.size,
+                    "entry": trade.entry,
+                    "exit": trade.exit,
+                    "pnl": trade.pnl,
+                    "return_pct": trade.return_pct,
+                    "notes": trade.notes,
+                    "prev_close": trade.prev_close,
+                    "created_at": trade.created_at,
                 }
                 trades_data.append(trade_dict)
-            
+
             return trades_data
 
     def iter_for_export(
@@ -423,7 +426,7 @@ class TradeRepository(BaseRepository[Trade]):
                 # CRITICAL: Always filter by profile_id to ensure profile isolation
                 if profile_id := filters.get("profile_id"):
                     conditions.append(Trade.profile_id == profile_id)
-                    
+
                 if symbol := filters.get("symbol"):
                     conditions.append(Trade.symbol.ilike(f"%{symbol}%"))
                 if side := filters.get("side"):

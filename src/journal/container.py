@@ -18,8 +18,8 @@ from .repositories.trade import TradeRepository
 from .services.analytics import AnalyticsService
 from .services.backfill_service import BackfillService
 from .services.cache import TTLCache
-from .services.fundamentals import FundamentalsService
 from .services.csv_import import CSVImportService
+from .services.fundamentals import FundamentalsService
 from .services.market import MarketService
 from .services.profile_service import ProfileService
 
