@@ -6,6 +6,7 @@ from ..db.dao import SortDir
 from ..db.dao import fetch_trades_paged_with_derived as fetch_paged
 
 COLUMNS = [
+    ("id", "ID"),
     ("trade_date", "Date"),
     ("symbol", "Symbol"),
     ("side", "Side"),

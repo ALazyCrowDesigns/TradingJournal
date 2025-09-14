@@ -365,6 +365,15 @@ class MainWindow(QMainWindow):
             self._analytics_loaded = True
 
     # --- Helpers
+    def _get_last_30_days_range(self):
+        """Get the date range for the last 30 days starting from today"""
+        from datetime import date, timedelta
+        
+        today = date.today()
+        thirty_days_ago = today - timedelta(days=30)
+        
+        return thirty_days_ago, today
+    
     def current_filters(self) -> dict:
         # Helper function for date conversion with better validation
         def get_valid_date(date_edit):
@@ -402,7 +411,23 @@ class MainWindow(QMainWindow):
         pf = profile_prefs.get("filters", {})
         self.ed_symbol.setText(pf.get("symbol", ""))
         self.cb_side.setCurrentText(pf.get("side", ""))
-        # dates left empty by default
+        
+        # Set date range - use saved dates if available, otherwise default to last 30 days
+        saved_date_from = pf.get("date_from")
+        saved_date_to = pf.get("date_to")
+        
+        if saved_date_from and saved_date_to:
+            # Use saved dates
+            from PySide6.QtCore import QDate
+            self.dt_from.setDate(QDate.fromString(saved_date_from.isoformat(), "yyyy-MM-dd"))
+            self.dt_to.setDate(QDate.fromString(saved_date_to.isoformat(), "yyyy-MM-dd"))
+        else:
+            # Default to last 30 days
+            start_date, end_date = self._get_last_30_days_range()
+            from PySide6.QtCore import QDate
+            self.dt_from.setDate(QDate.fromString(start_date.isoformat(), "yyyy-MM-dd"))
+            self.dt_to.setDate(QDate.fromString(end_date.isoformat(), "yyyy-MM-dd"))
+        
         self.cb_has_ohlcv.setChecked(bool(pf.get("has_ohlcv", False)))
         # Apply filters without refreshing analytics (will be done once after full init)
         self.model.setFilters(self.current_filters())
@@ -423,8 +448,13 @@ class MainWindow(QMainWindow):
     def clear_filters(self) -> None:
         self.ed_symbol.clear()
         self.cb_side.setCurrentIndex(0)
-        self.dt_from.clear()
-        self.dt_to.clear()
+        
+        # Reset dates to last 30 days instead of clearing
+        start_date, end_date = self._get_last_30_days_range()
+        from PySide6.QtCore import QDate
+        self.dt_from.setDate(QDate.fromString(start_date.isoformat(), "yyyy-MM-dd"))
+        self.dt_to.setDate(QDate.fromString(end_date.isoformat(), "yyyy-MM-dd"))
+        
         self.ed_pnl_min.clear()
         self.ed_pnl_max.clear()
         self.cb_has_ohlcv.setChecked(False)
