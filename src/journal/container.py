@@ -16,7 +16,6 @@ from .repositories.profile import ProfileRepository
 from .repositories.symbol import SymbolRepository
 from .repositories.trade import TradeRepository
 from .services.analytics import AnalyticsService
-from .services.backfill_service import BackfillService
 from .services.cache import TTLCache
 from .services.csv_import import CSVImportService
 from .services.fundamentals import FundamentalsService
@@ -125,16 +124,6 @@ class ApplicationContainer(containers.DeclarativeContainer):
         ),
     )
 
-    backfill_service = providers.Factory(
-        BackfillService,
-        trade_repository=trade_repository,
-        price_repository=price_repository,
-        market_service=market_service,
-        logger=providers.Factory(
-            structlog.get_logger,
-            name="backfill_service",
-        ),
-    )
 
 
 # Global container instance

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDateEdit,
+    QDialog,
     QFileDialog,
     QFrame,
     QHBoxLayout,
@@ -33,6 +34,7 @@ from ..container import ApplicationContainer
 from ..services.session_manager import SessionTransactionManager
 from ..services.session_persistence import SessionPersistence
 from .analytics_panel import AnalyticsPanel
+from .backfill_dialog import BackfillDialog
 from .columns_dialog import ColumnsDialog
 from .editable_trades_model import EditableTradesModel
 from .prefs import (
@@ -119,7 +121,6 @@ class MainWindow(QMainWindow):
         self._container = container
         self._analytics_service = container.analytics_service()
         self._csv_import_service = container.csv_import_service()
-        self._backfill_service = container.backfill_service()
         self._trade_repo = container.trade_repository()
         self._profile_service = container.profile_service()
 
@@ -204,8 +205,10 @@ class MainWindow(QMainWindow):
         data_menu = bar.addMenu("&Data")
         act_cols = data_menu.addAction("&Columns…")
         act_cols.triggered.connect(self.on_columns)
-        act_backfill = data_menu.addAction("&Backfill All Missing")
-        act_backfill.triggered.connect(self.on_backfill_all)
+        data_menu.addSeparator()
+        act_backfill = data_menu.addAction("&Backfill Market Data…")
+        act_backfill.triggered.connect(self.on_backfill_data)
+        data_menu.addSeparator()
         act_open_logs = data_menu.addAction("Open &Logs Folder")
         act_open_logs.triggered.connect(self.on_open_logs)
 
@@ -572,12 +575,8 @@ class MainWindow(QMainWindow):
                 )
                 return
 
-            # Prompt backfill
-            if (
-                QMessageBox.question(self, "Backfill", "Run backfill for all missing now?")
-                == QMessageBox.Yes
-            ):
-                self.on_backfill_all()
+            # Note: Backfill functionality has been moved to separate async service
+            # Use: py -3.13 -m journal_backfill.backfill_async --help
 
         except Exception as e:
             # Catch any other errors in the post-import process
@@ -593,18 +592,6 @@ class MainWindow(QMainWindow):
             )
             self.set_busy(False, "Ready")
 
-    def on_backfill_all(self) -> None:
-        self.set_busy(True, "Backfilling…")
-        # Store as instance variable to prevent garbage collection
-        self._backfill_worker = Worker(self._backfill_service.backfill_all_missing, max_workers=4)
-        self._backfill_worker.finished.connect(lambda out: self._after_backfill(out))
-        self._backfill_worker.failed.connect(lambda err: self._op_failed("Backfill failed", err))
-        self._backfill_worker.start()
-
-    def _after_backfill(self, out: dict) -> None:
-        self.set_busy(False, "Ready")
-        QMessageBox.information(self, "Backfill done", str(out))
-        self.model.reload(reset=True)
 
     def _op_failed(self, title: str, err: str) -> None:
         self.set_busy(False, "Ready")
@@ -615,6 +602,114 @@ class MainWindow(QMainWindow):
             os.startfile("logs")  # Windows
         except Exception:
             QMessageBox.information(self, "Logs", "Open the 'logs' folder in the project root.")
+    
+    def on_backfill_data(self) -> None:
+        """Open backfill dialog for all trades"""
+        self._show_backfill_dialog(selected_only=False)
+    
+    def on_backfill_selected(self) -> None:
+        """Open backfill dialog for selected trades"""
+        self._show_backfill_dialog(selected_only=True)
+    
+    def _show_backfill_dialog(self, selected_only: bool = False) -> None:
+        """Show the backfill dialog"""
+        try:
+            # Get selected trades if needed
+            selected_trades = []
+            if selected_only:
+                selected_trades = self._get_selected_trades()
+                if not selected_trades:
+                    QMessageBox.information(
+                        self, 
+                        "No Selection", 
+                        "Please select one or more trades to backfill market data."
+                    )
+                    return
+            
+            # Get all trades for the current profile
+            all_trades = self._get_all_profile_trades()
+            
+            if not all_trades:
+                QMessageBox.information(
+                    self,
+                    "No Trades",
+                    "No trades found in the current profile."
+                )
+                return
+            
+            # Create and show dialog
+            dialog = BackfillDialog(self)
+            dialog.set_trade_data(selected_trades, all_trades)
+            
+            if dialog.exec() == QDialog.Accepted:
+                # Refresh the model to show any updated data
+                self.model.reload(reset=True)
+                self.status_msg.setText("Market data backfill completed")
+                
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Backfill Error",
+                f"Failed to open backfill dialog: {e}"
+            )
+    
+    def _get_selected_trades(self) -> list[dict]:
+        """Get the currently selected trades as dictionaries"""
+        selection = self.table.selectionModel()
+        selected_rows = [index.row() for index in selection.selectedRows()]
+        
+        trades = []
+        for row in selected_rows:
+            if row < len(self.model.rows):
+                row_data = self.model.rows[row]
+                trade_dict = {}
+                
+                # Import INDEX_TO_KEY for proper field mapping
+                from .repository import INDEX_TO_KEY
+                
+                # Convert row data to dictionary using INDEX_TO_KEY mapping
+                for i, key in enumerate(INDEX_TO_KEY):
+                    if i < len(row_data):
+                        trade_dict[key] = row_data[i]
+                
+                # Ensure we have the essential fields
+                if trade_dict.get('symbol') and trade_dict.get('trade_date'):
+                    trades.append(trade_dict)
+        
+        return trades
+    
+    def _get_all_profile_trades(self) -> list[dict]:
+        """Get all trades for the current profile as dictionaries"""
+        try:
+            # Use the trade repository to get all trades for current profile
+            with self._trade_repo._session_scope() as session:
+                from sqlalchemy import select
+                from ..db.models import Trade
+                
+                query = select(Trade).where(Trade.profile_id == self.current_profile_id)
+                trades = session.scalars(query).all()
+                
+                trade_dicts = []
+                for trade in trades:
+                    trade_dict = {
+                        'symbol': trade.symbol,
+                        'trade_date': trade.trade_date,
+                        'side': trade.side,
+                        'size': trade.size,
+                        'entry': trade.entry,
+                        'exit': trade.exit,
+                        'pnl': trade.pnl,
+                        'return_pct': trade.return_pct,
+                        'notes': trade.notes,
+                        'prev_close': trade.prev_close,
+                    }
+                    trade_dicts.append(trade_dict)
+                
+                return trade_dicts
+                
+        except Exception as e:
+            print(f"Error getting all trades: {e}")
+            return []
 
     def apply_column_visibility(self) -> None:
         profile_prefs = get_profile_prefs(self.prefs, self.current_profile_id)
@@ -685,6 +780,14 @@ class MainWindow(QMainWindow):
                 menu.addAction("Delete Trade", self.on_delete_selected)
             else:
                 menu.addAction(f"Delete {len(selected_rows)} Trades", self.on_delete_selected)
+            menu.addSeparator()
+
+        # Backfill actions
+        if selected_rows:
+            if len(selected_rows) == 1:
+                menu.addAction("Backfill Market Data", lambda: self.on_backfill_selected())
+            else:
+                menu.addAction(f"Backfill {len(selected_rows)} Trades", lambda: self.on_backfill_selected())
             menu.addSeparator()
 
         # Always available actions

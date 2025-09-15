@@ -1,7 +1,11 @@
-from datetime import date
+from datetime import date, timedelta
 
 from journal.db.dao import get_close_from_db, upsert_daily_prices, upsert_symbols
-from journal.services.backfill import _prev_day
+
+
+def _prev_day(d: date) -> date:
+    """Helper function for getting previous day (moved from deleted backfill service)"""
+    return d - timedelta(days=1)
 
 
 def test_prev_close_db_first() -> None:

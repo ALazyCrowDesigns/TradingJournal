@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, aliased
 from ..config import settings
 from ..dto import DailyPriceIn, SymbolIn, TradeIn
 from ..services.cache import cached, invalidate_cache
-from .models import Base, DailyPrice, Symbol, Trade
+from .models import Base, BackfillData, DailyPrice, Symbol, Trade
 
 
 def _mk_engine() -> Engine:
@@ -458,6 +458,25 @@ def _derived_columns_expr(dp: Any) -> tuple[Any, Any, Any]:
     )
 
 
+def _derived_columns_expr_with_backfill(dp: Any, bf: Any) -> tuple[Any, Any, Any]:
+    # Use backfill data when available, fallback to daily_prices
+    prev = Trade.prev_close
+    o = case((bf.open_price != None, bf.open_price), else_=dp.o)
+    h = case((bf.hod != None, bf.hod), else_=dp.h)
+    low = case((bf.lod != None, bf.lod), else_=dp.low)
+    c = dp.c  # Close price not in backfill, use daily_prices
+    
+    gap_pct = (o - prev) / prev * 100.0
+    range_pct = (h - low) / prev * 100.0
+    closechg_pct = (c - prev) / prev * 100.0
+    # SQLite returns NULL if any operand NULL; that's fine.
+    return (
+        gap_pct.label("gap_pct"),
+        range_pct.label("range_pct"),
+        closechg_pct.label("closechg_pct"),
+    )
+
+
 def fetch_trades_paged_with_derived(
     limit: int = 500,
     offset: int = 0,
@@ -466,7 +485,16 @@ def fetch_trades_paged_with_derived(
     filters: dict | None = None,
 ) -> tuple[list[list], int]:
     dp = aliased(DailyPrice)
-    gap_pct, range_pct, closechg_pct = _derived_columns_expr(dp)
+    bf = aliased(BackfillData)
+    
+    # Use backfill data when available, fallback to daily_prices
+    o_col = case((bf.open_price != None, bf.open_price), else_=dp.o)
+    h_col = case((bf.hod != None, bf.hod), else_=dp.h)
+    l_col = case((bf.lod != None, bf.lod), else_=dp.low)
+    c_col = dp.c  # Close price not in backfill, use daily_prices
+    v_col = case((bf.day_volume != None, bf.day_volume), else_=dp.v)
+    
+    gap_pct, range_pct, closechg_pct = _derived_columns_expr_with_backfill(dp, bf)
 
     q = select(
         Trade.id,
@@ -479,15 +507,16 @@ def fetch_trades_paged_with_derived(
         Trade.pnl,
         Trade.return_pct,
         Trade.prev_close,
-        dp.o,
-        dp.h,
-        dp.low,
-        dp.c,
-        dp.v,
+        o_col.label("o"),
+        h_col.label("h"),
+        l_col.label("l"),
+        c_col.label("c"),
+        v_col.label("v"),
         gap_pct,
         range_pct,
         closechg_pct,
-    ).join(dp, and_(dp.symbol == Trade.symbol, dp.date == Trade.trade_date), isouter=True)
+    ).join(dp, and_(dp.symbol == Trade.symbol, dp.date == Trade.trade_date), isouter=True
+    ).join(bf, and_(bf.symbol == Trade.symbol, bf.trade_date == Trade.trade_date), isouter=True)
 
     q = _apply_trade_filters(q, filters)
 
@@ -501,11 +530,11 @@ def fetch_trades_paged_with_derived(
         "pnl": Trade.pnl,
         "return_pct": Trade.return_pct,
         "prev_close": Trade.prev_close,
-        "o": dp.o,
-        "h": dp.h,
-        "l": dp.low,
-        "c": dp.c,
-        "v": dp.v,
+        "o": o_col,
+        "h": h_col,
+        "l": l_col,
+        "c": c_col,
+        "v": v_col,
         "gap_pct": gap_pct,
         "range_pct": range_pct,
         "closechg_pct": closechg_pct,

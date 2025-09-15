@@ -96,3 +96,19 @@ class DailyPrice(Base):
     v: Mapped[int] = mapped_column(Integer)
 
     __table_args__ = (Index("ix_dp_symbol_date", "symbol", "date"),)
+
+
+class BackfillData(Base):
+    __tablename__ = "backfill_data"
+    symbol: Mapped[str] = mapped_column(String(16), primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    pre_high: Mapped[float | None] = mapped_column(Float)
+    pre_low: Mapped[float | None] = mapped_column(Float)
+    open_price: Mapped[float | None] = mapped_column(Float)
+    hod: Mapped[float | None] = mapped_column(Float)
+    lod: Mapped[float | None] = mapped_column(Float)
+    ah_high: Mapped[float | None] = mapped_column(Float)
+    ah_low: Mapped[float | None] = mapped_column(Float)
+    day_volume: Mapped[int | None] = mapped_column(Integer)
+
+    __table_args__ = (Index("ix_backfill_symbol_date", "symbol", "trade_date"),)
